@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Demo Portal</title></head>
+<body>
+  <h1>Demo Portal</h1>
+  <button id="toggle" aria-expanded="false" onclick="document.getElementById('menu').hidden = false">Toggle navigation</button>
+  <nav id="menu" hidden aria-label="Main">
+    <a href="records.html">Records</a>
+    <a href="catalog.html">Catalog</a>
+    <a href="private/secret.html">Private area</a>
+    <a href="https://example.org/">External site</a>
+  </nav>
+  <button id="alert" onclick="alert('hello from the portal')">Show alert</button>
+  <form onsubmit="return false">
+    <label for="user">Username</label><input id="user" name="user" type="text">
+    <label for="pw">Password</label><input id="pw" name="pw" type="password">
+  </form>
+  <label for="q">Search records</label><input id="q" name="q" type="search">
+  <p id="status">loading</p>
+  <script>
+    console.error('demo console error');
+    fetch('data.json').then(r => r.json()).then(d => { document.getElementById('status').textContent = 'loaded ' + d.count + ' records'; });
+  </script>
+</body>
+</html>

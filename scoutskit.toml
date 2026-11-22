@@ -1,0 +1,54 @@
+# ScoutsKit configuration. Safe to commit: API keys never live here, only the
+# NAME of the environment variable that holds them (set those in .env).
+#
+# Pick the provider per run with `scoutskit run --provider openai "..."`,
+# or via SCOUTSKIT_PROVIDER, or change default_provider below.
+
+default_provider = "anthropic"
+
+[agent]
+max_steps = 40          # hard stop for the explore loop (a long table takes ~2 steps per page)
+step_timeout_s = 60     # per act/observe/extract call
+headless = true
+
+[runs]
+dir = "runs"            # one sub-folder per run: actions.jsonl, screenshots, result
+
+# Model names are "<provider>/<model>". Edit freely.
+[providers.anthropic]
+model = "anthropic/claude-sonnet-5-5"
+api_key_env = "ANTHROPIC_API_KEY"
+
+[providers.openai]
+model = "openai/gpt-5.4-mini"
+api_key_env = "OPENAI_API_KEY"
+
+[providers.google]
+model = "google/gemini-2.5-flash"
+api_key_env = "GOOGLE_GENERATIVE_AI_API_KEY"
+
+[providers.groq]
+model = "groq/llama-3.3-70b-versatile"
+api_key_env = "GROQ_API_KEY"
+
+# OpenRouter routes around failing/limited models. Needs account credits for openrouter/auto.
+[providers.openrouter]
+model = "openrouter/auto"
+api_key_env = "OPENROUTER"
+
+# NVIDIA-hosted NIM (OpenAI-compatible; any other endpoint works the same via base_url).
+# Benchmarked 2026-11: super = accurate (~5 s/call). bolt = fast, but extracted 1 of 25 rows,
+# so use it only for cheap decisions, not extraction. bolt runs with thinking off; super runs with it ON because the agent picked the wrong
+# element 4/4 times without it.
+[providers.nvidia_bolt]
+base_url = "https://integrate.api.nvidia.com/v1"
+model = "nvidia/nemotron-3.5-bolt-e4b"
+api_key_env = "NVIDIA_API_KEY"
+extra_body = { chat_template_kwargs = { enable_thinking = false } }
+
+[providers.nvidia_super]
+base_url = "https://integrate.api.nvidia.com/v1"
+model = "nvidia/nemotron-3.5-super-vl-120b-a12b"
+api_key_env = "NVIDIA_API_KEY"
+extra_body = { chat_template_kwargs = { enable_thinking = true } }
+max_tokens = 8000   # thinking + a 25-row extract_rows call did not fit in 2000 (reply was cut off)

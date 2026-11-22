@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Catalog</title></head>
+<body>
+  <h1>Catalog</h1>
+  <table id="items">
+    <thead><tr><th>Code</th><th>Name</th><th>Group</th></tr></thead>
+    <tbody>
+      <tr><td>C001</td><td>Catalog item 1</td><td>Alpha</td></tr>
+      <tr><td>C002</td><td>Catalog item 2</td><td>Beta</td></tr>
+      <tr><td>C003</td><td>Catalog item 3</td><td>Alpha</td></tr>
+      <tr><td>C004</td><td>Catalog item 4</td><td>Beta</td></tr>
+      <tr><td>C005</td><td>Catalog item 5</td><td>Alpha</td></tr>
+      <tr><td>C006</td><td>Catalog item 6</td><td>Beta</td></tr>
+      <tr><td>C007</td><td>Catalog item 7</td><td>Alpha</td></tr>
+      <tr><td>C008</td><td>Catalog item 8</td><td>Beta</td></tr>
+      <tr><td>C009</td><td>Catalog item 9</td><td>Alpha</td></tr>
+      <tr><td>C010</td><td>Catalog item 10</td><td>Beta</td></tr>
+      <tr><td>C011</td><td>Catalog item 11</td><td>Alpha</td></tr>
+      <tr><td>C012</td><td>Catalog item 12</td><td>Beta</td></tr>
+      <tr><td>C013</td><td>Catalog item 13</td><td>Alpha</td></tr>
+      <tr><td>C014</td><td>Catalog item 14</td><td>Beta</td></tr>
+      <tr><td>C015</td><td>Catalog item 15</td><td>Alpha</td></tr>
+      <tr><td>C016</td><td>Catalog item 16</td><td>Beta</td></tr>
+      <tr><td>C017</td><td>Catalog item 17</td><td>Alpha</td></tr>
+      <tr><td>C018</td><td>Catalog item 18</td><td>Beta</td></tr>
+      <tr><td>C019</td><td>Catalog item 19</td><td>Alpha</td></tr>
+      <tr><td>C020</td><td>Catalog item 20</td><td>Beta</td></tr>
+      <tr><td>C021</td><td>Catalog item 21</td><td>Alpha</td></tr>
+      <tr><td>C022</td><td>Catalog item 22</td><td>Beta</td></tr>
+      <tr><td>C023</td><td>Catalog item 23</td><td>Alpha</td></tr>
+      <tr><td>C024</td><td>Catalog item 24</td><td>Beta</td></tr>
+      <tr><td>C025</td><td>Catalog item 25</td><td>Alpha</td></tr>
+      <tr><td>C026</td><td>Catalog item 26</td><td>Beta</td></tr>
+      <tr><td>C027</td><td>Catalog item 27</td><td>Alpha</td></tr>
+      <tr><td>C028</td><td>Catalog item 28</td><td>Beta</td></tr>
+      <tr><td>C029</td><td>Catalog item 29</td><td>Alpha</td></tr>
+      <tr><td>C030</td><td>Catalog item 30</td><td>Beta</td></tr>
+      <tr><td>C031</td><td>Catalog item 31</td><td>Alpha</td></tr>
+      <tr><td>C032</td><td>Catalog item 32</td><td>Beta</td></tr>
+      <tr><td>C033</td><td>Catalog item 33</td><td>Alpha</td></tr>
+      <tr><td>C034</td><td>Catalog item 34</td><td>Beta</td></tr>
+      <tr><td>C035</td><td>Catalog item 35</td><td>Alpha</td></tr>
+      <tr><td>C036</td><td>Catalog item 36</td><td>Beta</td></tr>
+      <tr><td>C037</td><td>Catalog item 37</td><td>Alpha</td></tr>
+      <tr><td>C038</td><td>Catalog item 38</td><td>Beta</td></tr>
+      <tr><td>C039</td><td>Catalog item 39</td><td>Alpha</td></tr>
+      <tr><td>C040</td><td>Catalog item 40</td><td>Beta</td></tr>
+      <tr><td>C041</td><td>Catalog item 41</td><td>Alpha</td></tr>
+      <tr><td>C042</td><td>Catalog item 42</td><td>Beta</td></tr>
+      <tr><td>C043</td><td>Catalog item 43</td><td>Alpha</td></tr>
+      <tr><td>C044</td><td>Catalog item 44</td><td>Beta</td></tr>
+      <tr><td>C045</td><td>Catalog item 45</td><td>Alpha</td></tr>
+      <tr><td>C046</td><td>Catalog item 46</td><td>Beta</td></tr>
+      <tr><td>C047</td><td>Catalog item 47</td><td>Alpha</td></tr>
+      <tr><td>C048</td><td>Catalog item 48</td><td>Beta</td></tr>
+      <tr><td>C049</td><td>Catalog item 49</td><td>Alpha</td></tr>
+      <tr><td>C050</td><td>Catalog item 50</td><td>Beta</td></tr>
+      <tr><td>C051</td><td>Catalog item 51</td><td>Alpha</td></tr>
+      <tr><td>C052</td><td>Catalog item 52</td><td>Beta</td></tr>
+      <tr><td>C053</td><td>Catalog item 53</td><td>Alpha</td></tr>
+      <tr><td>C054</td><td>Catalog item 54</td><td>Beta</td></tr>
+      <tr><td>C055</td><td>Catalog item 55</td><td>Alpha</td></tr>
+      <tr><td>C056</td><td>Catalog item 56</td><td>Beta</td></tr>
+      <tr><td>C057</td><td>Catalog item 57</td><td>Alpha</td></tr>
+      <tr><td>C058</td><td>Catalog item 58</td><td>Beta</td></tr>
+      <tr><td>C059</td><td>Catalog item 59</td><td>Alpha</td></tr>
+      <tr><td>C060</td><td>Catalog item 60</td><td>Beta</td></tr>
+    </tbody>
+  </table>
+  <p id="info"></p>
+  <button id="next">Next</button>
+  <script>
+    // like a paged data table: after load, only the current page of rows stays in the DOM
+    const all = Array.from(document.querySelectorAll('#items tbody tr'));
+    let page = 0;
+    function show() {
+      const body = document.querySelector('#items tbody');
+      body.innerHTML = '';
+      all.slice(page * 10, page * 10 + 10).forEach(r => body.appendChild(r));
+      document.getElementById('info').textContent = 'Showing ' + (page * 10 + 1) + ' to ' + Math.min(all.length, page * 10 + 10) + ' of ' + all.length + ' entries';
+    }
+    document.getElementById('next').onclick = () => { page++; show(); };
+    show();
+  </script>
+</body>
+</html>

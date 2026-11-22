@@ -1,0 +1,18 @@
+"""A shared limit on what one run may spend, so a team of failing agents cannot burn tokens without end."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+
+@dataclass
+class Budget:
+    max_tokens: int
+    spent: int = 0
+
+    def spend(self, tokens: int) -> None:
+        self.spent += max(0, tokens)
+
+    @property
+    def exhausted(self) -> bool:
+        return self.max_tokens > 0 and self.spent >= self.max_tokens  # 0 means no limit

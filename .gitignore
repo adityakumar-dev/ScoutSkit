@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+runs/
+.scoutskit/
+
+# web UI
+ui/node_modules/
+ui/dist/
+.pytest_cache/
+*.egg-info/

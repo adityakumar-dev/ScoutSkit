@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Feed</title></head>
+<body>
+  <h1>Feed</h1>
+  <ul id="list"></ul>
+  <button id="more">Load more</button>
+  <script>
+    // The data arrives from one request (items.json) with more fields than the page shows (owner, status);
+    // the page reveals it five at a time, so reading the screen takes eight clicks.
+    let items = [], shown = 0;
+    const draw = () => {
+      shown = Math.min(shown + 5, items.length);
+      document.getElementById('list').innerHTML = items.slice(0, shown).map(r => `<li>${r.id} - ${r.title} (${r.category})</li>`).join('');
+      document.getElementById('more').disabled = shown >= items.length;
+    };
+    fetch('items.json').then(r => r.json()).then(d => { items = d; draw(); });
+    document.getElementById('more').onclick = draw;
+  </script>
+</body>
+</html>
