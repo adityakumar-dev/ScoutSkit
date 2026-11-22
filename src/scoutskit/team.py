@@ -25,6 +25,7 @@ from .peek import rank as rank_by_peek
 from .search import Hit, same_page
 
 MAX_AGENTS = 3
+LAST_CHANCES = 2  # unfinished candidates that are checked once at the end
 SHARES = 3  # a sub-agent may spend at most 1/3 of the run's token budget
 SPARE_STEPS = 15  # a replacement for a failed scout gets a shorter leash: the picks it falls back on are less certain
 REFUSED = re.compile(r"HTTP (?:403|418|429)|block page|CAPTCHA", re.I)  # the site refused the browser: its other pages will be refused too
@@ -191,6 +192,15 @@ class Team:
             await asyncio.gather(*pending, return_exceptions=True)
             for task in pending:
                 self._announce(work[task], "stopped", report="stopped: another sub-agent's result was accepted" if winner else "stopped")
+        if winner is None:
+            # Nobody called done, but a scout may hold exactly what was asked for (a PDF it saved and then wandered away from): the best of what was
+            # found gets one last check by the brain (and the person), instead of being thrown away.
+            for member in sorted((m for m in members if m.found and m.result is not None), key=lambda m: m.found, reverse=True)[:LAST_CHANCES]:
+                accepted, why = await self._check(member)
+                self.rec.log(event="last_chance", agent=member.id, accepted=accepted, why=why[:200])
+                if accepted:
+                    winner, verdict = member, why
+                    break
         if winner is None and self.budget and self.budget.exhausted:
             verdict = f"the token budget ({self.budget.max_tokens:,}) was used up before any sub-agent finished the task"
         return TeamResult(members, winner, verdict)

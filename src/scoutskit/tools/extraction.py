@@ -54,11 +54,18 @@ def register(registry: ToolRegistry, ctx: ToolContext) -> None:
         raw_path, rendered_path = workdir / "source_raw.html", workdir / "source_rendered.html"
         raw_path.write_text(raw, encoding="utf-8")
         rendered_path.write_text(rendered, encoding="utf-8")
+        # Models sometimes use the NAMES as file names (open("RENDERED_PATH"), a file called OUT_PATH): make those work too.
+        (workdir / "HTML_PATH").write_text(raw, encoding="utf-8")
+        (workdir / "RENDERED_PATH").write_text(rendered, encoding="utf-8")
+        (workdir / "OUT_PATH").unlink(missing_ok=True)
         started = time.time()
         output = await sandbox.run_python(str(code), work=workdir, raw_html=raw_path, rendered_html=rendered_path)
         if "Traceback (most recent call last)" in output:
             output += "\n[the script crashed: fix the bug shown above and run it again; do not give up on code]"
         out_file = workdir / "out.json"
+        literal = workdir / "OUT_PATH"
+        if literal.exists() and (not out_file.exists() or out_file.stat().st_mtime < started):
+            out_file.write_bytes(literal.read_bytes())  # it wrote to a file called OUT_PATH: that is what it meant
         if not out_file.exists() or out_file.stat().st_mtime < started:
             output += "\n[nothing was saved: printing is not collecting. To keep records, json.dump(list_of_dicts, open(OUT_PATH, 'w')) then call use_script_output]"
         return output

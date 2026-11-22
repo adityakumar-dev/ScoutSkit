@@ -51,6 +51,7 @@ export const api = {
   focus: (id: string, agent: string) =>
     request<{ agent: string }>(`/api/runs/${id}/focus`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ agent }) }),
   savedUrl: (id: string, name: string) => `/api/runs/${id}/saved/${encodeURIComponent(name)}`,
+  replay: (id: string) => request<{ id: string }>(`/api/runs/${id}/replay`, { method: "POST" }),
   stopRun: (id: string) => request<{ stopped: boolean }>(`/api/runs/${id}/stop`, { method: "POST" }),
   rows: async (id: string): Promise<Row[]> => (await request<{ rows: Row[] }>(`/api/runs/${id}/files/result.json`)).rows,
   fileUrl: (id: string, name: string) => `/api/runs/${id}/files/${name}`,

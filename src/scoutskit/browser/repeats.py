@@ -27,6 +27,7 @@ FIND_JS = r"""(minItems) => {
   const CHROME = 'nav, header, footer, aside, [role="navigation"], [role="menu"], [role="menubar"], [role="banner"], [role="contentinfo"]';
   const shown = e => e.getClientRects().length > 0;
   let best = null;
+  const lists = [];
   for (const parent of document.querySelectorAll('body, body *')) {
     if (parent.closest(CHROME) || !shown(parent)) continue;
     const kids = [...parent.children].filter(k => !['SCRIPT', 'STYLE', 'OPTION', 'BR', 'HR', 'SVG', 'PATH', 'LINK', 'META', 'TH', 'TD'].includes(k.tagName.toUpperCase()) && shown(k));
@@ -48,10 +49,16 @@ FIND_JS = r"""(minItems) => {
       const avg = lengths.reduce((a, b) => a + b, 0) / lengths.length;
       if (avg < 12) continue;
       const score = c.items.length * Math.min(avg, 240);
-      if (!best || score > best.score) best = { score, parent, tag: c.tag, slot: c.slot, items: c.items };
+      const candidate = { score, parent, tag: c.tag, slot: c.slot, items: c.items };
+      lists.push(candidate);
+      if (!best || score > best.score) best = candidate;
     }
   }
   if (!best) return null;
+  // A list whose items each contain a longer list (accordion sections holding tables, cards holding rows): the inner list is the data.
+  const inner = lists.filter(c => ['TR', 'LI', 'ARTICLE', 'DT'].includes(c.tag) && c !== best && best.items.some(i => i !== c.parent && i.contains(c.parent)) && c.items.length >= best.items.length * 1.5)
+    .sort((a, b) => b.score - a.score)[0];
+  if (inner) best = inner;
   const items = best.items;
   const common = classes(items[0]).filter(k => SAFE.test(k) && items.every(i => i.classList.contains(k)));
   const attr = best.slot ? `[data-slot="${best.slot}"]` : '';
@@ -79,7 +86,8 @@ FIND_JS = r"""(minItems) => {
   };
   const first = items[0];
   walk(first, 0);
-  return { selector, count: items.length, tag: best.tag.toLowerCase(), html: first.outerHTML.slice(0, 20000), text: text(first).slice(0, 200), fields, second: text(items[1] || first).slice(0, 200) };
+  let matches = items.length; try { matches = document.querySelectorAll(selector).length; } catch (e) {}
+  return { selector, count: Math.max(matches, items.length), tag: best.tag.toLowerCase(), html: first.outerHTML.slice(0, 20000), text: text(first).slice(0, 200), fields, second: text(items[1] || first).slice(0, 200) };
 }"""
 
 
@@ -126,6 +134,14 @@ def raw_count(raw_html: str, selector: str) -> int:
 async def locate(page) -> dict | None:
     """The page's main list of repeated items as the page's own script describes it, or None when there is no list of at least MIN_ITEMS."""
     return await page.evaluate(FIND_JS, MIN_ITEMS)
+
+
+GENERIC = {"div", "span", "p", "a", "section", "td", "th", "tbody", "ul", "ol", "main"}
+
+
+def meaningful(found: dict) -> bool:
+    """A bare 'div' that happens to repeat 281 times says nothing about the page's content: such a selector is not announced."""
+    return found["selector"].strip().lower() not in GENERIC
 
 
 def build(found: dict, raw: int) -> Repeats:

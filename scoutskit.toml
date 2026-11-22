@@ -4,7 +4,7 @@
 # Pick the provider per run with `scoutskit run --provider openai "..."`,
 # or via SCOUTSKIT_PROVIDER, or change default_provider below.
 
-default_provider = "anthropic"
+default_provider = "nvidia_super"   # fast, and the most reliable of the hosted models on the benchmark tasks; the others are fallbacks in file order
 
 [agent]
 max_steps = 40          # hard stop for the explore loop (a long table takes ~2 steps per page)
@@ -40,12 +40,6 @@ api_key_env = "OPENROUTER"
 # Benchmarked 2026-11: super = accurate (~5 s/call). bolt = fast, but extracted 1 of 25 rows,
 # so use it only for cheap decisions, not extraction. bolt runs with thinking off; super runs with it ON because the agent picked the wrong
 # element 4/4 times without it.
-[providers.nvidia_bolt]
-base_url = "https://integrate.api.nvidia.com/v1"
-model = "nvidia/nemotron-3.5-bolt-e4b"
-api_key_env = "NVIDIA_API_KEY"
-extra_body = { chat_template_kwargs = { enable_thinking = false } }
-
 [providers.nvidia_super]
 base_url = "https://integrate.api.nvidia.com/v1"
 model = "nvidia/nemotron-3.5-super-vl-120b-a12b"
@@ -60,3 +54,10 @@ model = "nvidia/nemotron-3-ultra-550b-a55b"
 api_key_env = "NVIDIA_API_KEY"
 extra_body = { chat_template_kwargs = { enable_thinking = true } }
 max_tokens = 8000
+
+# Small and fast, but it chose wrong methods and extracted 1 of 25 rows in benchmarks: kept as the last fallback only.
+[providers.nvidia_bolt]
+base_url = "https://integrate.api.nvidia.com/v1"
+model = "nvidia/nemotron-3.5-bolt-e4b"
+api_key_env = "NVIDIA_API_KEY"
+extra_body = { chat_template_kwargs = { enable_thinking = false } }

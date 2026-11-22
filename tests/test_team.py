@@ -217,3 +217,27 @@ async def test_a_result_that_matches_the_pages_own_total_is_only_checked_for_rel
 
 async def _async(value):
     return value
+
+
+async def test_a_candidate_nobody_called_done_on_gets_a_last_check_instead_of_being_thrown_away(portal, tmp_path, monkeypatch):
+    """The scout saved the file it was sent for and then wandered until its step limit; the file is what was asked for."""
+    monkeypatch.setattr(team_module, "complete_json", verdict(True, "it is the syllabus asked for"))
+
+    def model():
+        saved, keys = [], iter("abcdefghijklmnopqrstuvwxyz")
+
+        async def brain(page: str) -> dict:
+            if "Download report" in page and not saved:
+                saved.append(True)
+                return {"tool": "save_file", "args": {"url": "report.pdf"}}
+            return {"tool": "press", "args": {"key": next(keys)}}  # never calls done
+        return [ScriptedChat(brain=brain)]
+
+    recorder = RunRecorder(tmp_path)
+    async with open_browser() as host:
+        team = Team(host, brief_for(portal, "files.html", agents=1), "get the report", providers=[type("P", (), {"name": "scripted"})()], make_models=model,
+                    recorder=recorder, max_steps=6, web=False)
+        result = await team.run()
+    assert result.members[0].result.status != "completed" and result.winner is result.members[0]
+    check = next(e for e in events(recorder) if e.get("event") == "last_chance")
+    assert check["accepted"] is True and "syllabus" in check["why"]

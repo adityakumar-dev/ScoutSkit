@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Hand, Square, Undo2 } from "lucide-react";
+import { Hand, Repeat, Square, Undo2 } from "lucide-react";
 import { api } from "../api";
 import type { RemoteInput } from "../remoteInput";
 import { clock, phaseOf, PHASES, type RunView } from "../runState";
@@ -22,12 +22,13 @@ interface Props {
   frame: string | null;
   send: (input: RemoteInput) => void;
   onChanged: () => void;
+  onOpen: (id: string) => void;
 }
 
 const PHASE_LABEL = { plan: "Plan", explore: "Explore", extract: "Extract", done: "Done" } as const;
 
 /** One run: what it is and how far it got, the browser, and the inspector (plan, agents, activity, data). */
-export function MissionView({ runId, task, run, frame, send, onChanged }: Props) {
+export function MissionView({ runId, task, run, frame, send, onChanged, onOpen }: Props) {
   const { settings } = useSettings();
   const [error, setError] = useState("");
   const [tab, setTab] = useState(settings.startTab);
@@ -62,6 +63,13 @@ export function MissionView({ runId, task, run, frame, send, onChanged }: Props)
             {run.provider && <span className="mono muted">{run.provider}</span>}
           </div>
         </div>
+        {!running && run.hasRecipe && (
+          <div className="m-actions">
+            <button className="btn" title="Repeat what this run did, with no model" onClick={() => { setError(""); api.replay(runId).then(({ id }) => onOpen(id)).catch((failure) => setError(failure instanceof Error ? failure.message : String(failure))); }}>
+              <Repeat size={15} /> Replay without a model
+            </button>
+          </div>
+        )}
         {running && (
           <div className="m-actions">
             {run.control === "agent" && !planning && <button className="btn" onClick={() => control("user")}><Hand size={15} /> Take control</button>}

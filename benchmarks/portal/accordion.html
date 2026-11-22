@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Syllabus</title></head>
+<body>
+  <main id="acc"></main>
+  <script>
+    const names = ['B.Pharma', 'B.Tech', 'BCA', 'BHMCT', 'M.Tech', 'MBA'];
+    document.getElementById('acc').innerHTML = names.map((n, k) =>
+      `<div class="accordion-item"><h2 class="accordion-header">${n} programmes and their syllabus documents</h2><div class="accordion-body"><table class="docs"><tbody>` +
+      Array.from({length: 12}, (_, i) => `<tr><td>${n} programme number ${i + 1} (${k * 100 + i})</td><td><a href="report.pdf?${n}${i}">Click here To View / Download</a></td></tr>`).join('') +
+      `</tbody></table></div></div>`).join('');
+  </script>
+</body>
+</html>

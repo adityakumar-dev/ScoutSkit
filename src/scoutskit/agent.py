@@ -55,6 +55,10 @@ Rules:
 - If the page loads its data from a request, network_log + network_body can return all of it at once.
 - Records are complete: when each item also carries a hidden detail block (a modal, an expandable row), its fields belong in the record
   too. Keep every column to the one element that holds that field; a cell that includes a nested detail block is wrong.
+- Never guess a web address. To reach a page or a document on the current site, call find_links(words): it lists the real links, including those in
+  hover menus and collapsed sections that `find` and the tree cannot see, and you goto or save_file the address it returns.
+- In scripts, HTML_PATH, RENDERED_PATH and OUT_PATH are variables holding file names (never the strings "HTML_PATH" or "RENDERED_PATH"), and
+  HTML / RENDERED already hold the page text. Use real HTML tags and CSS selectors, not the tree's roles (row, cell, rowgroup) or its refs.
 - To find a site or a document, call web_search(query): real search results as text. Never open a search engine in the browser (they
   refuse automated browsers). A result that is the document itself (a PDF link) can be kept straight away with save_file(its link).
 - If the page you were sent to holds no data (0 results, an empty table, "No data available"), do not hunt for hidden requests for more than

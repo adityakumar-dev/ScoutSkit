@@ -71,7 +71,7 @@ function Workbench() {
         onNew={() => setSelected(null)} onSettings={() => setSettingsOpen(true)} onSearch={() => setPaletteOpen(true)} />
       <main className="main">
         {selected
-          ? <MissionView key={selected} runId={selected} task={runs.find((r) => r.id === selected)?.task ?? ""} run={run} frame={frame} send={send} onChanged={refresh} />
+          ? <MissionView key={selected} runId={selected} task={runs.find((r) => r.id === selected)?.task ?? ""} run={run} frame={frame} send={send} onChanged={refresh} onOpen={open} />
           : <NewRun onStarted={open} />}
       </main>
       <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />

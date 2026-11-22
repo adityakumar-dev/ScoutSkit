@@ -121,6 +121,16 @@ def create_app(runs_dir: Path, execute=None, origins: list[str] | None = None) -
             raise HTTPException(409, "nothing is waiting for an answer")
         return {"ok": True}
 
+    @app.post("/api/runs/{run_id}/replay", status_code=201)
+    async def replay_run(run_id: str) -> dict:
+        """Repeat a completed run's recipe with no model, as a new run."""
+        try:
+            return {"id": manager.replay(known(run_id)).id}
+        except LookupError as error:
+            raise HTTPException(409, str(error)) from error
+        except TooManyRuns as error:
+            raise HTTPException(429, str(error)) from error
+
     @app.post("/api/runs/{run_id}/focus")
     async def focus(run_id: str, request: FocusRequest) -> dict:
         if not await manager.focus(known(run_id), request.agent):

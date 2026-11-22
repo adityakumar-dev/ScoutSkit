@@ -37,6 +37,7 @@ class Recipe:
     feed: Feed | None = None
     web: bool = False  # the run left its start site, so replay needs the open-web scope too
     extracts: bool = False  # True when the run's data came from a script that reads the page, so replay can repeat it
+    expected_files: list[str] = field(default_factory=list)  # the files the recorded run saved: replay saves them again and compares
 
     def save(self, path: Path) -> None:
         path.write_text(json.dumps(asdict(self), indent=2, ensure_ascii=False), encoding="utf-8")

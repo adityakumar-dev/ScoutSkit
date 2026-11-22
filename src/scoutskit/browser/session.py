@@ -28,6 +28,7 @@ from .safety import Policy, SafetyError, Scope
 from . import census as census_module
 from .census import Census, DetailBlocks
 from . import feeds as feeds_module
+from . import links as links_module
 from . import repeats as repeats_module
 from .element import ELEMENT_INFO_JS
 from .element import describe as describe_element
@@ -320,7 +321,7 @@ class BrowserSession:
         """The page's main list of repeated items (rows, cards, entries) with a selector that matches them. Advice only: never raises."""
         try:
             found = await repeats_module.locate(self.page)
-            if not found:
+            if not found or not repeats_module.meaningful(found):
                 return None
             key = (self.page.url.split("#")[0], found["selector"])
             if key not in self._raw_repeat_counts:  # parsing a big page is slow and the raw source does not change
@@ -329,6 +330,14 @@ class BrowserSession:
             return repeats_module.build(found, self._raw_repeat_counts[key])
         except (PlaywrightError, ValueError):
             return None
+
+    async def find_links(self, query: str) -> str:
+        """Links on the page matching the words of `query`, hidden ones included (a menu that opens on hover is in the DOM all along)."""
+        try:
+            everything = await self.page.evaluate(links_module.FIND_LINKS_JS)
+        except PlaywrightError as error:
+            raise _explain(error, "reading the links") from error
+        return links_module.describe(links_module.rank(everything, query), query)
 
     async def details(self) -> list[DetailBlocks]:
         """Repeated label/value blocks in the raw source: fields each item carries that the visible table may not show."""
@@ -434,6 +443,8 @@ class BrowserSession:
         if self.files is None:
             raise ActionError("this run does not save files")
         url = urljoin(self.page.url, url)
+        if (existing := self.files.have(url)) is not None:
+            return existing  # already saved by this run: no second copy
         for _ in range(MAX_REDIRECTS + 1):  # redirects are followed by hand: each address must pass the policy, not just the first
             try:
                 await self.policy.check(url)
@@ -668,7 +679,7 @@ class BrowserSession:
             if self.page.url.startswith("chrome-error:"):  # the aborted navigation left the browser's error page: back to where we were
                 await self.page.go_back()
             return f"the policy blocked a navigation to {', '.join(dict.fromkeys(urls))}: it is not a public website you may visit"
-        if self.policy.host_ok(self.page.url) or self.page.url.startswith("about:"):
+        if not self.page.url or self.policy.host_ok(self.page.url) or self.page.url.startswith("about:"):  # (an empty address: a download, not a page)
             return None
         away = self.page.url
         await self.page.go_back()

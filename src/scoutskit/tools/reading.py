@@ -24,6 +24,9 @@ def register(registry: ToolRegistry, ctx: ToolContext) -> None:
     async def find(query: str, limit: int = 15) -> str:
         return await session.find(str(query), int(limit))
 
+    async def find_links(query: str) -> str:
+        return await session.find_links(str(query))
+
     async def javascript_tool(expression: str) -> str:
         return await session.evaluate(str(expression))
 
@@ -79,8 +82,12 @@ def register(registry: ToolRegistry, ctx: ToolContext) -> None:
         Tool("inspect_element", "Show the REAL HTML behind a tree element: tag, id, classes, a CSS selector and what it contains. The tree's role names "
              "(grid, rowgroup, gridcell...) are not HTML tags; use this before writing selectors for run_python or javascript_tool.",
              {"ref": "the element's ref"}, inspect_element, reads=True),
-        Tool("find", "Search the whole page tree (including rows folded away) for elements whose line contains every word; interactive elements first.",
+        Tool("find", "Search the page tree (including rows folded away) for elements whose line contains every word; interactive elements first. "
+             "It sees only what is shown: for a page or a document that may be in a menu, use find_links.",
              {"query": "words to look for, e.g. 'next page' or 'R150'", "limit": "most results to return?"}, find, reads=True),
+        Tool("find_links", "Find links on the page by their words, hidden menu and collapsed-section links included, with their real addresses and the row or entry "
+             "they sit in. Use it to reach a page or a document (e.g. 'syllabus', 'B.Tech computer science pdf'), then goto or save_file the address it gives.",
+             {"query": "words that the link or its row contains"}, find_links, reads=True),
         Tool("javascript_tool", "Read data from the page with JavaScript: an expression (or statements ending in `return value`) whose value comes back as JSON. "
              "Read-only: code that uses the network, navigates or changes the page is refused.",
              {"expression": "e.g. document.querySelectorAll('tr').length"}, javascript_tool, reads=True),

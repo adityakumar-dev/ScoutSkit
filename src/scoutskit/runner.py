@@ -178,3 +178,34 @@ def _attacher(attach: Attach | None):
             await attached
 
     return hook
+
+
+async def replay_recipe(
+    source: Path, _task: str = "", *, say: Say = lambda _: None, attach: Attach | None = None, recorder: RunRecorder | None = None, control: RunControl | None = None,
+    headed: bool = False, **_,
+) -> Outcome:
+    """Repeat a saved recipe (the run folder `source`) with no model. A new run of its own: the browser is shown, the result and any files are kept."""
+    from .browser import FileStore, open_browser
+    from .recipe import RECIPE_FILE, Recipe, replay
+
+    settings = load_settings()
+    recipe = Recipe.load(source / RECIPE_FILE)
+    recorder = recorder or RunRecorder(settings.runs_dir)
+    task = f"Replay: {recipe.task}"
+    recorder.log(event="task", task=task)
+    recorder.log(event="start", task=task, plan={"start_url": recipe.start_url, "goal": "Repeat the recorded run without a model"}, providers=[], web=recipe.web)
+    recorder.log(event="plan", goal=f"Repeat the recorded run without a model ({len(recipe.steps)} steps)", start_url=recipe.start_url, item_name="item", fields=recipe.fields, min_items=1)
+    recorder.log(event="todo", items=[{"text": f"{step.tool} {step.target or step.args.get('url', '')}".strip(), "status": "todo"} for step in recipe.steps])
+    store = FileStore(recorder.files_dir, on_saved=lambda saved: recorder.log(event="file", agent="a1", **saved.as_dict()))
+    async with open_browser(headless=settings.agent.headless and not headed) as host:
+        session = await host.session(recipe.start_url, respect_robots=False, scope="web" if recipe.web else "site", files=store)
+        if attach:
+            await _attacher(attach)(session, "a1")
+        report = await replay(session, recipe, recorder.code_dir, log=lambda **entry: recorder.log(agent="a1", **entry))
+    message = "; ".join(f"{f.kind}: {f.detail}" for f in report.findings) or "the site still matches the recording"
+    summary = {"task": task, "status": report.status, "steps": report.steps_done, "items": len(report.rows), "files": report.files, "message": message,
+               "recipe": str(source / RECIPE_FILE), "findings": [f.__dict__ for f in report.findings]}
+    recorder.save_result(report.rows, report.fields, summary)
+    for finding in report.findings:
+        recorder.log(event="finding", kind=finding.kind, detail=finding.detail, blocking=finding.blocking)
+    return Outcome(report.status, len(report.rows), report.steps_done, message, recorder.dir, False, summary)

@@ -83,7 +83,7 @@ class RunManager:
         self.active: dict[str, ActiveRun] = {}
 
     # ---- starting and stopping --------------------------------------------------
-    def start(self, task: str, *, ask_first: bool = False, **options) -> ActiveRun:
+    def start(self, task: str, *, ask_first: bool = False, execute: Callable | None = None, **options) -> ActiveRun:
         if sum(1 for run in self.active.values() if run.status == "running") >= self.max_parallel:
             raise TooManyRuns(f"{self.max_parallel} runs are already going; wait for one to finish or stop it")
         recorder = RunRecorder(self.runs_dir)
@@ -95,17 +95,29 @@ class RunManager:
         recorder.listeners.append(lambda entry: run.channel.publish(to_event(entry)))
         recorder.listeners.append(lambda entry: self._show_who_needs_help(run, entry))
         self.active[run.id] = run
-        run.worker = asyncio.create_task(self._drive(run, options))
+        run.worker = asyncio.create_task(self._drive(run, options, execute or self.execute))
         return run
 
-    async def _drive(self, run: ActiveRun, options: dict) -> None:
+    def replay(self, source_id: str) -> ActiveRun:
+        """Start a new run that repeats the recipe saved in run `source_id`, with no model."""
+        from functools import partial
+
+        from ..recipe import RECIPE_FILE, Recipe
+        from ..runner import replay_recipe
+
+        folder = self.runs_dir / source_id
+        if not self.valid(source_id) or not (folder / RECIPE_FILE).is_file():
+            raise LookupError("that run has no recipe to replay (only completed runs save one)")
+        return self.start(f"Replay: {Recipe.load(folder / RECIPE_FILE).task}", execute=partial(replay_recipe, folder))
+
+    async def _drive(self, run: ActiveRun, options: dict, execute: Callable) -> None:
         async def attach(session, agent: str = "a1") -> None:
             run.sessions[agent] = session
             if not run.focus:
                 await run.watch(agent)
 
         try:
-            outcome = await self.execute(run.task, say=lambda text: run.recorder.log(event="notice", text=text),
+            outcome = await execute(run.task, say=lambda text: run.recorder.log(event="notice", text=text),
                                          attach=attach, recorder=run.recorder, control=run.control, **options)
             run.status = outcome.status
             run.channel.publish({"type": "finished", "status": outcome.status, "items": outcome.items, "steps": outcome.steps,

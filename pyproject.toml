@@ -1,7 +1,7 @@
 [project]
 name = "scoutskit"
 version = "0.1.0"
-description = "Add your description here"
+description = "ScoutsKit: an autonomous web-task agent that keeps evidence and replays what worked without a model"
 readme = "README.md"
 authors = [
     { name = "adityakumar-dev", email = "adityakumar.devxlinux@gmail.com" }

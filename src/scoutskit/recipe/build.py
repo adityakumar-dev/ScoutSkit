@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 from .model import Feed, Recipe, Step
 
-REPLAYABLE = {"goto", "click", "fill", "select", "press", "scroll", "hover", "wait_for", "back", "switch_tab", "close_tab", "open_tab"}
+REPLAYABLE = {"save_file", "goto", "click", "fill", "select", "press", "scroll", "hover", "wait_for", "back", "switch_tab", "close_tab", "open_tab"}
 READS_THE_PAGE = ("HTML_PATH", "RENDERED_PATH")  # a script that mentions neither only holds data typed in by the model
 
 
@@ -30,9 +30,10 @@ def from_run(run_dir: Path, feed: Feed | None = None, agent: str | None = None) 
         path = urlparse(entries[-1].get("url_to") or start["plan"]["start_url"]).path
         steps += [Step("run_python", {"code": script}, path), Step("use_script_output", {}, path)]
     plan = start["plan"]
+    files = _files(run_dir)
     return Recipe(task=start["task"], start_url=plan["start_url"], steps=steps, fields=list(plan.get("fields", [])),
                   key_field=plan.get("key_field", ""), expected_items=_items(run_dir),
-                  feed=None if script is not None else feed, web=bool(start.get("web")), extracts=script is not None or feed is not None)
+                  feed=None if script is not None else feed, web=bool(start.get("web")), extracts=script is not None or feed is not None, expected_files=files)
 
 
 def _step(entry: dict) -> Step | None:
@@ -56,6 +57,13 @@ def _extraction_script(entries: list[dict]) -> str | None:
             code = str(entry["args"].get("code", ""))
             return code if any(name in code for name in READS_THE_PAGE) else None
     return None
+
+
+def _files(run_dir: Path) -> list[str]:
+    try:
+        return [str(name) for name in json.loads((run_dir / "result.json").read_text(encoding="utf-8"))["summary"].get("files", [])]
+    except (OSError, ValueError, KeyError):
+        return []
 
 
 def _items(run_dir: Path) -> int:

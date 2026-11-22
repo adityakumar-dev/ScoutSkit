@@ -1,10 +1,76 @@
 # ScoutsKit — Implementation Plan
 
 Product: **ScoutsKit**. Project: **Invisible Failure** (B.Tech final-year, UTU Dehradun, 2026–27).
-Status date: **2026-11-11**. First working module due after **2026-11-20** (9 days).
+Status date: **2026-11-23** (see the status section below; the older sections are kept as the history of the decisions). First working module (40%) is presented after **2026-11-20**.
 
 This file is the single source of truth for *what we build, in what order, and what could stop us*.
 Nothing in a step below is built until you approve it.
+
+## Status on 2026-11-23
+
+**Short answer: Mode 1 (the agent that does a task) is far ahead of the plan; Mode 2 (testing under profiles, usability and accessibility) has not been started.** Measured against the synopsis's own list for the 40% demonstration (§5.8), about **half** of the items are done; measured against all eight objectives, the project is at about **35–40%**, unevenly: very strong on the agent, near zero on evaluation.
+
+### The 40% demonstration scope (synopsis §5.8), item by item
+
+| # | Item in the synopsis | Status | Evidence |
+|---|---|---|---|
+| 1 | Natural-language task input and basic decomposition | **Done, beyond the plan** | Research (free web search), a plan with sources and steps, approval or added context, then sub-agents. |
+| 2 | Controlled browser execution with DOM and accessibility-tree inspection | **Done** | Playwright session; tree with refs; finders for lists and links; request log and bodies; sandboxed scripts. |
+| 3 | Recording and replay of a task as a recipe | **Done** | Recipes replay with no model (SIH: 101 rows in 2 s; the syllabus PDF downloaded again). Replay button in the UI. *Not yet:* recording a recipe from a person's own actions. |
+| 4 | Orchestrator running several agents in parallel in isolated sessions | **Partial** | Sub-agents run in parallel, each in its own browser context, with a token budget and fail-over. *Not yet:* parallel **replay** of one recipe under several profiles (that is the synopsis's point). |
+| 5 | At least three environment profiles | **Not done** | Network and CPU throttling was only proven on one page (spike); no profile module. |
+| 6 | Basic functional testing and usability metrics | **Not done** | We keep raw data (steps, time, failures, findings such as blocked pages and changed pages) but there is no evaluator and no difficulty metric. |
+| 7 | axe-core integration and keyboard checks | **Not done** | |
+| 8 | Screenshots, structured logs, unified initial report | **Partial** | Screenshots and logs for every run; the interface shows them. *Not yet:* one unified report file per evaluation. |
+| 9 | Controlled demonstration websites | **Partial** | Local test pages (tables, hidden menus, CAPTCHA, feeds, cards, accordions). *Not yet:* a site with **injected faults** whose detection can be scored. |
+
+Score: 3 done + 3 partial of 9. The finished part is the harder one (an agent that works on real sites); the missing part is mostly engineering on top of what exists (Playwright CDP, axe-core injection, a report).
+
+### Objectives of the synopsis (§3)
+
+| # | Objective | Now | Remarks |
+|---|---|---|---|
+| 1 | Plan natural-language tasks, execute with tools, validate, produce output (Mode 1) | **~90%** | Validated against the page's own totals; every run leaves evidence. |
+| 2 | Controlled interaction engine on Playwright, bounded tools, structured action record | **~90%** | Tools are bounded; site policy, request guard, no private networks. |
+| 3 | Explore once, compile a recipe, replay under different conditions | **~75%** | Replay works; "under different conditions" needs profiles. |
+| 4 | Automatic workflow discovery | **0%** | Planned for January. The research step is a first, different kind of discovery. |
+| 5 | Functional, usability and accessibility evaluation; validated difficulty metric | **~5%** | Only the raw data exists. The volunteer study is still a logistics risk. |
+| 6 | Predefined and custom environment profiles | **0%** | |
+| 7 | Hierarchical orchestrator, replay agents, localisation by changing one condition | **~25%** | Parallel isolated sessions and a budget exist; replay agents and localisation do not. |
+| 8 | Controlled benchmarks with known faults; parallel vs sequential; comparison with Lighthouse / axe / scripted Playwright | **~10%** | Test pages and a replayable benchmark task exist; no fault injection, no comparisons. |
+
+### What was built beyond the plan (and why)
+- **Research before browsing**: free web search (a metasearch library plus Wikipedia), sources picked by number so the model cannot invent a URL, a plan the person approves or corrects. Reason: the first runs started from a search page in the browser and were blocked (HTTP 418, CAPTCHA); search as data is reliable and visible.
+- **Sub-agents with a check**: parallel scouts, a first look at each source (no model), fail-over, a token budget, and a verification that counts against what the page states.
+- **Human in the loop**: take control of the live browser, CAPTCHA hand-over (never bypassed), result acceptance.
+- **Files**: downloads with refusal of error pages, a viewer for PDF, CSV, JSON, text and images.
+- **Interface**: a web workbench with settings; one-command start and a pre-flight check (`scoutskit check`).
+- **Lessons recorded** in `project_process_report.md`: small models chose wrong methods because the tools hid the real page structure; the fixes were structural (finders, checks, budgets) and helped every model.
+
+### Risks, updated
+| Risk | State |
+|---|---|
+| R1 Real sites reject or stall Playwright | **Resolved for the tasks tried** (sih.gov.in, uktech.ac.in, ubter.in load and work). Some shops answer HTTP 403: recorded as findings, never bypassed. |
+| R2 Locators unstable → replay fails | **Mostly resolved**: role + name + position recipes replayed on SIH and uktech; a changed page is reported as a finding. |
+| R3 Parallel throttling not independent | **Still untested** (needs the profiles work). |
+| R4 Quota/latency; synopsis requires a **mock mode** | Fallback chain exists. **A mock/cached model mode is not built.** |
+| R6 Volunteer study | Not started. |
+| R7 Time | The cut list in section 7 now matters: profiles, axe-core + keyboard and a report are the missing 40% items. |
+| New: free metasearch is unofficial and fails now and then | Retries and notes; a search API key would make it dependable. |
+| New: the two SIH 2025 mirrors disagree (101 vs 238) | The run takes the first whose total matches; stated openly. |
+
+### Suggested next steps (ordered by value for the 40% scope and for the research question)
+1. **Profiles + parallel replay** (~1–2 days): three profiles (desktop, low-end mobile, slow network) from Playwright CDP; replay one recipe in parallel isolated contexts; record time, failures and a comparison table. This also answers R3 and gives the "parallel vs sequential" measurement.
+2. **axe-core + keyboard checks** (~1 day): inject axe-core into the replayed pages; a Tab-traversal check; findings into the same record.
+3. **Unified report** (~1 day): JSON + Markdown/HTML per evaluation with evidence links (screenshots, steps, files).
+4. **Benchmark site with injected faults** (~1–2 days): a small site (Docker or local) with 3–4 known faults so detection can be scored.
+5. **Mock model mode** (~½ day): record and replay model answers so tests and demos run offline.
+6. Then the semester-8 items: workflow discovery, custom profiles, replay agents, Hindi checks, comparison with Lighthouse / axe / scripted Playwright, the volunteer study.
+
+### How to describe it honestly to the guide
+"The agent half is working on real sites, with replay without a model and parallel sub-agents. The evaluation half (profiles, usability metrics, accessibility checks, report) is next and builds on the same session and recipe code; nothing in the design has to change."
+
+---
 
 ## Progress log
 

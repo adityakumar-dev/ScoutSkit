@@ -56,6 +56,23 @@ def providers(
             console.print(f"[red]{error}[/red]")
 
 
+@app.command()
+def check() -> None:
+    """Is everything ready? Browser, sandbox, model, search, interface and disk, in one go. Run it before a demo."""
+    from .preflight import run_all
+
+    results = asyncio.run(run_all())
+    table = Table(title="ScoutsKit pre-flight")
+    for column in ("", "check", "result", "if it failed"):
+        table.add_column(column)
+    for item in results:
+        table.add_row("[green]✓[/green]" if item.ok else "[red]✗[/red]", item.name, item.detail, "" if item.ok else item.fix)
+    console.print(table)
+    bad = [item.name for item in results if not item.ok]
+    console.print("[green]Ready.[/green]" if not bad else f"[red]Not ready:[/red] {', '.join(bad)}")
+    raise typer.Exit(1 if bad else 0)
+
+
 async def _run(task: str, url: str | None, provider_name: str | None, max_steps: int | None, headed: bool, strict: bool, web: bool) -> None:
     from .runner import execute
 
@@ -66,20 +83,20 @@ async def _run(task: str, url: str | None, provider_name: str | None, max_steps:
 
 
 async def _replay(recipe_path: Path, url: str | None, headed: bool) -> None:
-    from .browser import open_session
+    from .browser import FileStore, open_session
     from .recipe import Recipe, replay
     from .recorder import RunRecorder
 
     recipe = Recipe.load(recipe_path)
     recorder = RunRecorder(load_settings().runs_dir)
     async with open_session(url or recipe.start_url, headless=not headed, respect_robots=False,
-                            scope="web" if recipe.web else "site") as session:
+                            scope="web" if recipe.web else "site", files=FileStore(recorder.files_dir)) as session:
         report = await replay(session, recipe, recorder.dir / "code", start_url=url, log=recorder.log)
-    summary = {"task": recipe.task, "status": report.status, "steps": report.steps_done, "items": len(report.rows), "recipe": str(recipe_path),
+    summary = {"task": recipe.task, "status": report.status, "steps": report.steps_done, "items": len(report.rows), "files": report.files, "recipe": str(recipe_path),
                "findings": [f.__dict__ for f in report.findings]}
     recorder.save_result(report.rows, report.fields, summary)
     colour = {"replayed": "green", "changed": "yellow"}.get(report.status, "red")
-    console.print(f"[{colour}]{report.status}[/{colour}]: {report.steps_done} of {len(recipe.steps)} steps, {len(report.rows)} items, no model used")
+    console.print(f"[{colour}]{report.status}[/{colour}]: {report.steps_done} of {len(recipe.steps)} steps, {len(report.rows)} items{f', {len(report.files)} files' if report.files else ''}, no model used")
     for finding in report.findings:
         console.print(f"  [{'red' if finding.blocking else 'yellow'}]{finding.kind}[/] step {finding.step}: {finding.detail}")
     console.print(f"evidence: {recorder.dir}")
@@ -125,10 +142,21 @@ def run(
 @app.command()
 def serve(
     port: int = typer.Option(8000, "--port", help="Port to listen on (127.0.0.1 only)."),
+    open_browser: bool = typer.Option(False, "--open", help="Open the interface in your browser."),
 ) -> None:
     """Start the local server the web UI talks to."""
+    import threading
+    import webbrowser
+
     import uvicorn
 
     from .server import create_app
+    from .preflight import UI_DIST
 
+    address = f"http://127.0.0.1:{port}"
+    if not (UI_DIST / "index.html").is_file():
+        console.print("[yellow]The interface is not built: run `cd ui && npm install && npm run build` (the API still works).[/yellow]")
+    console.print(f"ScoutsKit is running at [bold]{address}[/bold]   (Ctrl C to stop)")
+    if open_browser:
+        threading.Timer(1.2, lambda: webbrowser.open(address)).start()
     uvicorn.run(create_app(load_settings().runs_dir), host="127.0.0.1", port=port, log_level="warning")

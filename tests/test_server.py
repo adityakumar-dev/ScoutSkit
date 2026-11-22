@@ -360,3 +360,27 @@ def test_a_viewer_who_arrives_at_a_still_page_gets_its_picture_at_once():
         return first
 
     assert aio.run(go()) == b"\xff\xd8 still page"
+
+
+def test_a_completed_run_can_be_replayed_as_a_new_run_with_no_model(portal, tmp_path):
+    import shutil
+
+    from scoutskit.recipe import RECIPE_FILE, Recipe, Step
+
+    source = tmp_path / "20250101-000010"
+    (source / "files").mkdir(parents=True)
+    Recipe(task="get the report", start_url=portal + "/files.html", steps=[Step("save_file", {"url": portal + "/report.pdf"}, "/files.html")],
+           expected_files=["report.pdf"]).save(source / RECIPE_FILE)
+    (source / "actions.jsonl").write_text(json.dumps({"event": "start", "task": "get the report"}) + "\n")
+    with client(tmp_path) as http:
+        started = http.post("/api/runs/20250101-000010/replay")
+        assert started.status_code == 201
+        new_id = started.json()["id"]
+        wait_until(lambda: http.get(f"/api/runs/{new_id}").json()["status"] in ("replayed", "changed", "diverged"), 40)
+        summary = http.get(f"/api/runs/{new_id}").json()
+        assert summary["status"] == "replayed" and summary["task"].startswith("Replay: get the report")
+        assert (tmp_path / new_id / "files" / "report.pdf").exists()  # saved again, with no model involved
+        assert http.get(f"/api/runs/{new_id}/saved/report.pdf").status_code == 200
+        assert http.post("/api/runs/does-not-exist/replay").status_code in (404, 422, 409)
+        (tmp_path / "20250101-000011").mkdir()
+        assert http.post("/api/runs/20250101-000011/replay").status_code == 409  # no recipe: said so, not a crash

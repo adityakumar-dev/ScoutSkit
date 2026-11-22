@@ -62,3 +62,19 @@ async def test_menus_headers_footers_and_hidden_lists_are_not_the_pages_data(por
     async with open_browser() as host:
         looked = await peek(host, Hit("shell", portal + "/empty_shell.html", "", "web"))
     assert looked.items == 0 and looked.empty and looked.rank == 2  # says it has no data: tried last
+
+
+async def test_a_list_of_sections_that_each_hold_a_longer_list_reports_the_inner_rows(portal):
+    """An accordion of programmes, each a table of documents: the rows are the data, not the six sections."""
+    async with open_session(portal + "/accordion.html") as session:
+        await session.goto(portal + "/accordion.html")
+        found = await session.repeats()
+    assert found is not None and found.tag == "tr" and found.live == 72  # 6 tables x 12 rows, all matched by the selector
+    assert "programme number" in found.text
+
+
+def test_a_bare_generic_selector_is_not_a_finding():
+    from scoutskit.browser.repeats import meaningful
+
+    assert not meaningful({"selector": "div"}) and not meaningful({"selector": " SPAN "})
+    assert meaningful({"selector": "tr.bg-white"}) and meaningful({"selector": "tr"}) and meaningful({"selector": 'div[data-slot="card"]'}) and meaningful({"selector": "li"})

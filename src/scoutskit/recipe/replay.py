@@ -31,6 +31,7 @@ class ReplayReport:
     findings: list[Finding] = field(default_factory=list)
     rows: list[dict[str, str]] = field(default_factory=list)
     fields: list[str] = field(default_factory=list)
+    files: list[str] = field(default_factory=list)  # names of the files this replay saved
 
     @property
     def status(self) -> str:
@@ -77,6 +78,7 @@ async def replay(session: BrowserSession, recipe: Recipe, workdir: Path, start_u
     if recipe.feed and not any(f.blocking for f in report.findings):
         await _read_feed(session, recipe, collector, report)
     report.rows, report.fields = list(collector.rows.values()), collector.fields
+    report.files = [f.name for f in session.files.saved] if session.files else []
     _compare_result(report, recipe)
     return report
 
@@ -97,7 +99,9 @@ async def _read_feed(session: BrowserSession, recipe: Recipe, collector: Collect
 def _compare_result(report: ReplayReport, recipe: Recipe) -> None:
     if any(f.blocking for f in report.findings):
         return
-    if not recipe.extracts:
+    if recipe.expected_files and len(report.files) != len(recipe.expected_files):
+        report.findings.append(Finding("result_changed", 0, f"the recorded run saved {len(recipe.expected_files)} files, this replay {len(report.files)}"))
+    if not recipe.extracts and not recipe.expected_files:
         report.findings.append(Finding("no_extraction", 0, "the recorded run did not get its data with a script that reads the page, so replay repeats the actions only"))
-    elif len(report.rows) != recipe.expected_items:
+    elif recipe.extracts and len(report.rows) != recipe.expected_items:
         report.findings.append(Finding("result_changed", 0, f"the recorded run collected {recipe.expected_items} items, this replay {len(report.rows)}"))

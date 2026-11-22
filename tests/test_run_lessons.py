@@ -104,3 +104,18 @@ def test_a_page_that_says_it_has_no_data_is_recognised():
         assert NO_DATA.search(text), text
     for text in ("Showing 10 results", "10 results", "Data available soon"):
         assert not NO_DATA.search(text), text
+
+
+@needs_sandbox
+async def test_the_names_used_as_file_names_work_too(portal, tmp_path):
+    """open("RENDERED_PATH") and a file called OUT_PATH are what a model writes when it takes the names for file names."""
+    import json
+
+    async with open_session(portal + "/cards.html") as session:
+        await session.goto(portal + "/cards.html")
+        registry = build_registry(session, Collector([]), workdir=tmp_path / "code")
+        code = ('import json\ntext = open("RENDERED_PATH", encoding="utf-8").read()\n'
+                'json.dump([{"n": text.count("Problem statement number")}], open("OUT_PATH", "w"))\nprint("done")')
+        out, _ = await registry.call("run_python", {"code": code})
+        assert "nothing was saved" not in out and "Error" not in out  # the literal names worked and its output was taken as OUT_PATH
+        assert json.loads((tmp_path / "code" / "out.json").read_text())[0]["n"] >= 30
