@@ -28,6 +28,7 @@ from .safety import Policy, SafetyError, Scope
 from . import census as census_module
 from .census import Census, DetailBlocks
 from . import feeds as feeds_module
+from . import repeats as repeats_module
 from .element import ELEMENT_INFO_JS
 from .element import describe as describe_element
 from .javascript import violation
@@ -151,6 +152,7 @@ class BrowserSession:
         self.last_tree = ""  # the complete, unfolded tree of the last snapshot
         self._raw_tables: dict[str, list[census_module.Table]] = {}  # raw-source tables per URL; the source does not change
         self._details: dict[str, list[DetailBlocks]] = {}
+        self._raw_repeat_counts: dict[tuple[str, str], int] = {}
         self._wire(page)
 
     # ---- event capture -------------------------------------------------
@@ -311,6 +313,20 @@ class BrowserSession:
             rendered, _ = await self.source_html("rendered")
             shown = await asyncio.to_thread(census_module.tables, rendered)
             return census_module.compare(self._raw_tables[url], shown, keys)
+        except (PlaywrightError, ValueError):
+            return None
+
+    async def repeats(self) -> "repeats_module.Repeats | None":
+        """The page's main list of repeated items (rows, cards, entries) with a selector that matches them. Advice only: never raises."""
+        try:
+            found = await repeats_module.locate(self.page)
+            if not found:
+                return None
+            key = (self.page.url.split("#")[0], found["selector"])
+            if key not in self._raw_repeat_counts:  # parsing a big page is slow and the raw source does not change
+                raw, _ = await self.source_html("raw")
+                self._raw_repeat_counts[key] = await asyncio.to_thread(repeats_module.raw_count, raw, found["selector"])
+            return repeats_module.build(found, self._raw_repeat_counts[key])
         except (PlaywrightError, ValueError):
             return None
 

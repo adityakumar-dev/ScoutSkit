@@ -16,13 +16,13 @@ function Card({ agent, watching, canWatch, onWatch }: { agent: AgentView; watchi
     <li className={`agent-card ${agent.status}${watching ? " watching" : ""}`}>
       <div className="agent-head">
         <strong>{agent.name}</strong>
-        <span className="agent-state">{watching ? "◉ watching" : agent.status}</span>
+        <span className="agent-state">{watching ? "watching" : agent.status}</span>
       </div>
       {agent.url ? <p className="mono small">{host(agent.url)}</p> : agent.task && <p>{agent.task}</p>}
-      {agent.id !== MAIN && <p className="hint">{agent.steps} steps{agent.last ? ` · ${agent.last.slice(0, 70)}` : ""}</p>}
+      {agent.id !== MAIN && <p className="muted small">{agent.steps} steps{agent.last ? ` · ${agent.last.slice(0, 70)}` : ""}</p>}
       {agent.report && <p className="agent-report">{agent.report}</p>}
       {agent.verdict && <p className={agent.verdict.startsWith("✓") ? "verdict ok" : "verdict no"}>Brain: {agent.verdict}</p>}
-      {canWatch && !watching && <button className="ghost small-btn" onClick={onWatch}>Watch this browser</button>}
+      {canWatch && !watching && <button className="btn sm" onClick={onWatch}>Watch this browser</button>}
     </li>
   );
 }
@@ -50,7 +50,7 @@ export function AgentGraph({ runId, run }: { runId: string; run: RunView }) {
         <circle cx={CENTER} cy={CENTER} r={34} className={`node core ${main.status}`} />
         <text x={CENTER} y={CENTER + 5} className="core-label">brain</text>
       </svg>
-      {!subs.length && <p className="hint center">Sub-agents appear once the plan is approved: one per picked source, working in parallel.</p>}
+      {!subs.length && <p className="muted center">Sub-agents appear once the plan is approved: one per picked source, working in parallel.</p>}
       <ul className="agent-list">
         {run.agents.map((agent) => (
           <Card key={agent.id} agent={agent} watching={run.focus === agent.id && subs.length > 1} canWatch={live && agent.id !== MAIN && agent.status === "running" && subs.length > 1} onWatch={() => watch(agent.id)} />

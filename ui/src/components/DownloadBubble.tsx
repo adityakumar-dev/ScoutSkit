@@ -1,3 +1,4 @@
+import { Download, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { SavedFile } from "../runState";
 import { size } from "./Files";
@@ -22,12 +23,12 @@ export function DownloadBubble({ files, live, onOpen, onShowAll }: { files: Save
   if (!shown.length) return null;
   const last = shown[shown.length - 1];
   return (
-    <div className="bubble" role="status">
-      <div className="bubble-head"><span className="bubble-icon">⤓</span><strong>{shown.length > 1 ? `${shown.length} files saved` : "File saved"}</strong><button className="bubble-x" onClick={() => setShown([])} aria-label="Close">×</button></div>
-      <div className="bubble-file"><span className="file-name">{last.name}</span><span className="hint">{size(last.size)} · done</span></div>
-      <div className="bubble-actions">
-        <button className="ghost" onClick={() => { onOpen(last.name); setShown([]); }}>Open</button>
-        <button className="ghost" onClick={() => { onShowAll(); setShown([]); }}>Show all files</button>
+    <div className="toast" role="status">
+      <div className="toast-head"><Download size={15} /><strong>{shown.length > 1 ? `${shown.length} files saved` : "File saved"}</strong><button className="icon-btn" onClick={() => setShown([])} aria-label="Close"><X size={14} /></button></div>
+      <div className="toast-file"><span className="file-name">{last.name}</span><span className="muted small">{size(last.size)}</span></div>
+      <div className="toast-actions">
+        <button className="btn sm" onClick={() => { onOpen(last.name); setShown([]); }}>Open</button>
+        <button className="btn sm" onClick={() => { onShowAll(); setShown([]); }}>All files</button>
       </div>
     </div>
   );

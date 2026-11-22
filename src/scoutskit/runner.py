@@ -103,13 +103,16 @@ async def execute(
     from .team import team_picks
 
     hosts = {urlsplit(hit.url).hostname for hit in team_picks(brief, brief.agents)}  # the sites the first sub-agents start from
-    if len(hosts) > 1 and not web:  # a plan that names several sites needs to visit them; the person approved it
+    if url is None and not web:  # the search chose the sites and the person approved the plan: following a public site it found is the point
+        web = True
+        say("no start URL was given: sub-agents may visit the public websites the search found")
+    elif len(hosts) > 1 and not web:  # a plan that names several sites needs to visit them; the person approved it
         web = True
         say(f"the plan starts on {len(hosts)} sites ({', '.join(sorted(h for h in hosts if h)[:4])}): sub-agents may visit public websites")
     async with open_browser(headless=settings.agent.headless and not headed) as host:
         team = Team(host, brief, task, providers=providers, make_models=lambda: [make_chat_model(p) for p in providers], recorder=recorder,
                     max_steps=max_steps or settings.agent.max_steps, web=web, control=control, gate=gate, attach=_attacher(attach), say=say,
-                    search=_searcher(sources), budget=Budget(settings.agent.team_token_budget))
+                    search=_searcher(sources), budget=Budget(settings.agent.team_token_budget), peek=True)
         outcome = await team.run()
         best = outcome.best
         result = best.result

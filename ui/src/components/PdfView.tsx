@@ -80,16 +80,16 @@ export function PdfView({ url }: { url: string }) {
   }, [url]);
 
   if (error) return <p className="error viewer-pad">Could not show this PDF here: {error}. Use ↗ to open it in a new tab, or download it.</p>;
-  if (!doc) return <p className="hint viewer-pad">Opening PDF…</p>;
+  if (!doc) return <p className="muted viewer-pad">Opening PDF…</p>;
   const width = Math.round(PAGE_WIDTH * ZOOMS[zoom]);
   return (
     <div className="pdf-view">
       <div className="pdf-bar">
         <span className="mono">{doc.numPages} page{doc.numPages > 1 ? "s" : ""}</span>
         <div className="pdf-zoom">
-          <button className="ghost" disabled={zoom === 0} onClick={() => setZoom(zoom - 1)} aria-label="Zoom out">−</button>
+          <button className="btn sm" disabled={zoom === 0} onClick={() => setZoom(zoom - 1)} aria-label="Zoom out">−</button>
           <span className="mono">{Math.round(ZOOMS[zoom] * 100)}%</span>
-          <button className="ghost" disabled={zoom === ZOOMS.length - 1} onClick={() => setZoom(zoom + 1)} aria-label="Zoom in">+</button>
+          <button className="btn sm" disabled={zoom === ZOOMS.length - 1} onClick={() => setZoom(zoom + 1)} aria-label="Zoom in">+</button>
         </div>
       </div>
       <div className="pdf-pages">

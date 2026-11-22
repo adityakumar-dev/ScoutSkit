@@ -19,6 +19,9 @@ def register(registry: ToolRegistry, ctx: ToolContext) -> None:
         census = await ctx.session.census(list(ctx.collector.rows))
         if census and collected < census.raw_rows:
             return f"{census.sentence()}, and you have collected {collected}"
+        found = await ctx.session.repeats()
+        if found and found.live >= 8 and collected < found.live * 0.9:  # a list of cards shows its length in the page itself
+            return f"the page lists {found.live} items (selector {found.selector!r}) and you have collected {collected}"
         return None
 
     async def done(reason: str | None = None) -> str:
@@ -38,7 +41,7 @@ def register(registry: ToolRegistry, ctx: ToolContext) -> None:
         if problem and not reason:
             raise ActionError(
                 f"done rejected: {problem}. Keep exploring; if there really are no more items, call done again with a `reason` "
-                "that says why (for example what the page shows)."
+                "that says why (for example what the page shows). If this page holds no data at all, call fail with that reason: another source will be tried."
             )
         if problem:
             return f"task complete with a warning: {problem}. Reason given: {reason}"

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Problem cards</title></head>
+<body>
+  <nav><a href="#a">Home</a> <a href="#b">About</a> <a href="#c">Rules</a> <a href="#d">Contact</a> <a href="#e">Help</a> <a href="#f">Login</a></nav>
+  <select id="f"><option>All</option><option>Hardware</option><option>Software</option><option>Other</option><option>More</option><option>Even more</option></select>
+  <p>Showing 30 problem statements</p>
+  <div id="grid"></div>
+  <script>
+    // Cards in the page itself (no table), the colour class depends on the difficulty, like a real card list.
+    const level = ['green', 'yellow', 'red'];
+    document.getElementById('grid').innerHTML = Array.from({length: 30}, (_, i) =>
+      `<div data-slot="card" class="card border-l-4 border-l-${level[i % 3]}-500 rounded">` +
+      `<h3 class="title">Problem statement number ${i + 1} about topic ${i * 7}</h3><span data-slot="badge" class="badge">${['Hardware', 'Software'][i % 2]}</span>` +
+      `<div class="code">PS${25000 + i}</div><p class="body">Description of problem ${i + 1} with enough words to count as content.</p></div>`).join('');
+  </script>
+</body>
+</html>

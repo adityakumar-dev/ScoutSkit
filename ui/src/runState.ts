@@ -95,6 +95,7 @@ export interface ResultCheck {
   files: string[];
   why: string;
   url: string;
+  doubt: boolean; // the brain doubts this result: you decide
   state: "waiting" | "approved" | "rejected";
 }
 
@@ -193,7 +194,7 @@ function applyKnown(run: RunView, event: RunEvent): RunView {
     case "result_check":
       return {
         ...run,
-        resultCheck: { agent: text(event.agent), name: text(event.name), items: Number(event.items ?? 0), files: strings(event.files), why: text(event.why), url: text(event.url), state: "waiting" },
+        resultCheck: { agent: text(event.agent), name: text(event.name), items: Number(event.items ?? 0), files: strings(event.files), why: text(event.why), url: text(event.url), doubt: event.doubt === true, state: "waiting" },
       };
     case "verify":
       return { ...run, agents: updateAgent(run.agents, text(event.agent), (a) => ({ ...a, verdict: `${event.complete ? "✓" : "✗"} ${text(event.why)}` })) };

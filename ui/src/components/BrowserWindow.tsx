@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { ArrowLeft, Copy, Globe, Hand, Lock, RotateCw, Undo2, X } from "lucide-react";
 import type { RemoteInput } from "../remoteInput";
 import type { RunView, Tab } from "../runState";
 import { LiveView } from "./LiveView";
@@ -32,32 +33,30 @@ export function BrowserWindow({ runId, run, frame, screenshotUrl, send, onContro
   };
 
   return (
-    <div className={`window${driving ? " driving" : ""}${run.status === "running" ? "" : " ended"}`}>
-      <div className="window-top">
-        <span className="lights" aria-hidden><i /><i /><i /></span>
-        <div className="tabs" role="tablist">
-          {run.tabs.map((tab) => (
-            <div key={tab.index} className={tab.active ? "tab active" : "tab"} role="tab" aria-selected={tab.active}>
-              <button className="tab-title" disabled={!driving} onClick={() => send({ kind: "switch_tab", index: tab.index })} title={tab.url}>{titleOf(tab)}</button>
-              {driving && run.tabs.length > 1 && <button className="tab-x" aria-label={`Close tab ${tab.index}`} onClick={() => send({ kind: "close_tab", index: tab.index })}>×</button>}
-            </div>
-          ))}
-          {driving && <button className="tab-plus" title="Open a copy of this tab" onClick={() => send({ kind: "duplicate_tab" })}>+</button>}
-        </div>
+    <div className={`browser${driving ? " driving" : ""}${run.status === "running" ? "" : " ended"}`}>
+      <div className="btabs" role="tablist">
+        {run.tabs.map((tab) => (
+          <div key={tab.index} className={tab.active ? "btab active" : "btab"} role="tab" aria-selected={tab.active}>
+            <button className="btab-title" disabled={!driving} onClick={() => send({ kind: "switch_tab", index: tab.index })} title={tab.url}>{titleOf(tab)}</button>
+            {driving && run.tabs.length > 1 && <button className="btab-x" aria-label={`Close tab ${tab.index}`} onClick={() => send({ kind: "close_tab", index: tab.index })}><X size={12} /></button>}
+          </div>
+        ))}
+        {!run.tabs.length && <span className="muted small pad">no tabs yet</span>}
       </div>
-      <form className="omnibox" onSubmit={go}>
-        <button type="button" disabled={!driving} title="Back" onClick={() => send({ kind: "back" })}>←</button>
-        <button type="button" disabled={!driving} title="Reload" onClick={() => send({ kind: "reload" })}>↻</button>
+      <form className="addr" onSubmit={go}>
+        <button type="button" className="icon-btn" disabled={!driving} title="Back" aria-label="Back" onClick={() => send({ kind: "back" })}><ArrowLeft size={15} /></button>
+        <button type="button" className="icon-btn" disabled={!driving} title="Reload" aria-label="Reload" onClick={() => send({ kind: "reload" })}><RotateCw size={14} /></button>
         <div className="url">
-          <span className="lock" aria-hidden>{address.startsWith("https") ? "🔒" : "◌"}</span>
+          {address.startsWith("https") ? <Lock size={12} /> : <Globe size={12} />}
           <input value={address} disabled={!driving} aria-label="Address" onFocus={() => setEditing(true)} onBlur={() => setEditing(false)} onChange={(e) => setAddress(e.target.value)} />
         </div>
+        <button type="button" className="icon-btn" disabled={!driving || !active} title="Open a copy of this tab" aria-label="Duplicate tab" onClick={() => send({ kind: "duplicate_tab" })}><Copy size={14} /></button>
         {run.status === "running" ? (
-          <button type="button" className={`who ${run.control}`} onClick={() => onControl(run.control === "agent" ? "user" : "agent")}
+          <button type="button" className={`driver ${run.control}`} onClick={() => onControl(run.control === "agent" ? "user" : "agent")}
             title={run.control === "agent" ? "Pause the agent and use this browser yourself" : run.control === "requested" ? "Cancel the request" : "Give the browser back to the agent"}>
-            {run.control === "agent" ? "✋ Take control" : run.control === "requested" ? "handing over… (cancel)" : "↩ Hand back"}
+            {run.control === "agent" ? <><Hand size={13} /> Take control</> : run.control === "requested" ? "Handing over… (cancel)" : <><Undo2 size={13} /> Hand back</>}
           </button>
-        ) : <span className="who">finished</span>}
+        ) : <span className="driver idle">Finished</span>}
       </form>
       <LiveView runId={runId} run={run} frame={frame} screenshotUrl={screenshotUrl} send={send} />
     </div>

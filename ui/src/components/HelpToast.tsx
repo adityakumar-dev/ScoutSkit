@@ -1,3 +1,4 @@
+import { Hand } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api";
 import type { RunView } from "../runState";
@@ -14,8 +15,8 @@ export function HelpToast({ runId, run }: { runId: string; run: RunView }) {
   };
   const who = run.agents.length > 2 ? run.agents.find((a) => a.id === help.agent)?.name : "";
   return (
-    <div className="help-toast" role="alertdialog" aria-label="Human help needed">
-      <div className="help-head"><span className="help-icon">✋</span><strong>Human needed</strong><span className="pulse" /></div>
+    <div className="toast warn" role="alertdialog" aria-label="Human help needed">
+      <div className="toast-head"><Hand size={15} /><strong>Human needed</strong></div>
       <p>{who ? `${who}: ` : ""}<span className="mono">{help.host}</span> is asking you to prove you are human.</p>
       <p className="hint">
         {ready
@@ -23,9 +24,9 @@ export function HelpToast({ runId, run }: { runId: string; run: RunView }) {
           : "Handing the browser over as soon as the agent finishes its step…"}
       </p>
       {help.url && <p className="mono small dim" title={help.url}>{help.url.length > 70 ? `${help.url.slice(0, 70)}…` : help.url}</p>}
-      <div className="help-actions">
-        <button className="ghost" disabled={busy} onClick={() => answer("skip")}>Skip this site</button>
-        <button className="primary" disabled={busy || !ready} onClick={() => answer("")}>I solved it — continue</button>
+      <div className="toast-actions">
+        <button className="btn sm" disabled={busy} onClick={() => answer("skip")}>Skip this site</button>
+        <button className="btn sm primary" disabled={busy || !ready} onClick={() => answer("")}>I solved it, continue</button>
       </div>
     </div>
   );

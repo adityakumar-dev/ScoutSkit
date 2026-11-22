@@ -52,3 +52,11 @@ model = "nvidia/nemotron-3.5-super-vl-120b-a12b"
 api_key_env = "NVIDIA_API_KEY"
 extra_body = { chat_template_kwargs = { enable_thinking = true } }
 max_tokens = 8000   # thinking + a 25-row extract_rows call did not fit in 2000 (reply was cut off)
+
+# The largest NVIDIA model: for runs where the smaller ones choose the wrong method.
+[providers.nvidia_ultra]
+base_url = "https://integrate.api.nvidia.com/v1"
+model = "nvidia/nemotron-3-ultra-550b-a55b"
+api_key_env = "NVIDIA_API_KEY"
+extra_body = { chat_template_kwargs = { enable_thinking = true } }
+max_tokens = 8000

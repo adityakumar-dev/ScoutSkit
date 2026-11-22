@@ -75,7 +75,7 @@ export function LiveView({ runId, run, frame, screenshotUrl, send }: Props) {
   return (
     <div
       ref={box}
-      className={driving ? "live driving" : "live"}
+      className={driving ? "viewport driving" : "viewport"}
       tabIndex={driving ? 0 : -1}
       onKeyDown={(event) => {
         if (!driving) return;
@@ -114,10 +114,10 @@ export function LiveView({ runId, run, frame, screenshotUrl, send }: Props) {
       {src ? (
         <img ref={image} key={runId} src={src} alt="The browser the agent is working in" draggable={false} onClick={onClick} />
       ) : (
-        <div className="live-empty">{run.status === "running" ? "Waiting for the browser…" : "No picture for this run."}</div>
+        <div className="viewport-empty">{run.status === "running" ? "Waiting for the browser…" : "No picture for this run."}</div>
       )}
       {ripples.map((r) => <span key={r.id} className={r.right ? "ripple right" : "ripple"} style={{ left: r.left, top: r.top }} />)}
-      {driving && <span className="drive-hint">You're driving · click, scroll, type, paste</span>}
+      {driving && <span className="drive-hint">You are driving</span>}
     </div>
   );
 }

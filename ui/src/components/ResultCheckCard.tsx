@@ -1,3 +1,4 @@
+import { Check, CircleHelp } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api";
 import type { RunView } from "../runState";
@@ -13,16 +14,16 @@ export function ResultCheckCard({ runId, run }: { runId: string; run: RunView })
     api.answer(runId, action).finally(() => setBusy(false));
   };
   return (
-    <div className="result-check" role="alertdialog" aria-label="Accept this result?">
-      <span className="rc-icon">✓</span>
+    <div className={check.doubt ? "result-check doubt" : "result-check"} role="alertdialog" aria-label="Accept this result?">
+      <span className="rc-icon">{check.doubt ? <CircleHelp size={18} /> : <Check size={18} />}</span>
       <div className="rc-body">
         <strong>{check.name} finished: {check.items} items{check.files.length ? ` · ${check.files.length} file${check.files.length > 1 ? "s" : ""}` : ""}</strong>
-        <span className="hint">Brain: {check.why}</span>
+        <span className="hint">{check.doubt ? "The brain has doubts — you decide: " : "Brain: "}{check.why}</span>
         {check.files.length > 0 && <span className="mono small">{check.files.join(", ")}</span>}
       </div>
       <div className="rc-actions">
-        <button className="ghost" disabled={busy} onClick={() => answer("revise")}>{others ? `Keep looking (${others} still working)` : "Not right"}</button>
-        <button className="primary" disabled={busy} onClick={() => answer("approve")}>{others ? "Accept & stop the others" : "Accept"}</button>
+        <button className="btn sm" disabled={busy} onClick={() => answer("revise")}>{others ? `Keep looking (${others} still working)` : "Not right"}</button>
+        <button className="btn sm primary" disabled={busy} onClick={() => answer("approve")}>{check.doubt ? "Accept anyway" : others ? "Accept & stop the others" : "Accept"}</button>
       </div>
     </div>
   );

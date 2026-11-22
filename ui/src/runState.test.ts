@@ -124,7 +124,8 @@ suite("team", () => {
     expect(run.focus).toBe("a1");
     expect(run.files[0]).toMatchObject({ name: "syllabus.pdf", agent: "a1", size: 1200 });
     expect(run.agents.find((a) => a.id === "a1")?.verdict).toBe("✓ official syllabus");
-    expect(run.resultCheck).toMatchObject({ name: "Scout 1", state: "waiting", files: ["syllabus.pdf"] });
+    expect(run.resultCheck).toMatchObject({ name: "Scout 1", state: "waiting", files: ["syllabus.pdf"], doubt: false });
+    expect(applyEvent(emptyRun, { type: "result_check", agent: "a2", name: "Scout 2", items: 101, files: [], why: "cannot confirm the total", doubt: true }).resultCheck?.doubt).toBe(true);
     expect(run.approval).toBe(""); // a result check is not a plan approval
     run = applyEvent(run, { type: "approval", state: "approved", topic: "result" });
     expect(run.resultCheck?.state).toBe("approved");

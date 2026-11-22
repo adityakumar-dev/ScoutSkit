@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { CornerDownLeft } from "lucide-react";
 import type { RunSummary } from "../api";
-import { StatusPill } from "./StatusPill";
+import { Status } from "./Status";
 
 export interface Command {
   id: string;
@@ -9,42 +10,26 @@ export interface Command {
   run: () => void;
 }
 
-/** Ctrl/⌘ K: jump to any mission or action by typing. */
-export function CommandPalette({ runs, commands, onOpenRun }: { runs: RunSummary[]; commands: Command[]; onOpenRun: (id: string) => void }) {
-  const [open, setOpen] = useState(false);
+/** Ctrl/⌘ K: jump to any run or action by typing. */
+export function CommandPalette({ open, onClose, runs, commands, onOpenRun }: { open: boolean; onClose: () => void; runs: RunSummary[]; commands: Command[]; onOpenRun: (id: string) => void }) {
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setOpen((value) => !value);
-        setQuery("");
-        setCursor(0);
-      } else if (event.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  useEffect(() => { if (open) { setQuery(""); setCursor(0); } }, [open]);
 
   const items = useMemo(() => {
     const q = query.toLowerCase();
-    const actions = commands.filter((c) => c.label.toLowerCase().includes(q)).map((c) => ({ key: c.id, label: c.label, hint: c.hint, run: c.run, status: undefined }));
-    const missions = runs.filter((r) => (r.task || r.id).toLowerCase().includes(q)).slice(0, 8)
-      .map((r) => ({ key: r.id, label: r.task || r.id, hint: `${r.items} items`, run: () => onOpenRun(r.id), status: r.status }));
-    return [...actions, ...missions];
+    const actions = commands.filter((c) => c.label.toLowerCase().includes(q)).map((c) => ({ key: c.id, group: "Actions", label: c.label, hint: c.hint, run: c.run, status: undefined as RunSummary["status"] | undefined }));
+    const found = runs.filter((r) => (r.task || r.id).toLowerCase().includes(q)).slice(0, 8)
+      .map((r) => ({ key: r.id, group: "Runs", label: r.task || r.id, hint: r.items ? `${r.items} items` : "", run: () => onOpenRun(r.id), status: r.status as RunSummary["status"] | undefined }));
+    return [...actions, ...found];
   }, [query, commands, runs, onOpenRun]);
 
   if (!open) return null;
-  const choose = (index: number) => {
-    items[index]?.run();
-    setOpen(false);
-  };
+  const choose = (index: number) => { items[index]?.run(); onClose(); };
   return (
-    <div className="palette-backdrop" onClick={() => setOpen(false)}>
-      <div className="palette" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Command palette">
-        <input autoFocus value={query} placeholder="Search missions and actions…" onChange={(e) => { setQuery(e.target.value); setCursor(0); }}
+    <div className="scrim top" onClick={onClose}>
+      <div className="palette" role="dialog" aria-label="Command palette" onClick={(e) => e.stopPropagation()}>
+        <input autoFocus value={query} placeholder="Search runs and actions" onChange={(e) => { setQuery(e.target.value); setCursor(0); }}
           onKeyDown={(e) => {
             if (e.key === "ArrowDown") { e.preventDefault(); setCursor((c) => Math.min(c + 1, items.length - 1)); }
             if (e.key === "ArrowUp") { e.preventDefault(); setCursor((c) => Math.max(c - 1, 0)); }
@@ -53,12 +38,13 @@ export function CommandPalette({ runs, commands, onOpenRun }: { runs: RunSummary
         <ul>
           {items.map((item, index) => (
             <li key={item.key} className={index === cursor ? "on" : ""} onMouseEnter={() => setCursor(index)} onClick={() => choose(index)}>
+              {item.status ? <Status status={item.status} short /> : <span className="dot-gap" />}
               <span className="palette-label">{item.label}</span>
-              {item.status ? <StatusPill status={item.status} /> : null}
-              {item.hint && <span className="hint">{item.hint}</span>}
+              {item.hint && <span className="muted small">{item.hint}</span>}
+              {index === cursor && <CornerDownLeft size={13} className="muted" />}
             </li>
           ))}
-          {!items.length && <li className="hint">No match.</li>}
+          {!items.length && <li className="muted">Nothing matches.</li>}
         </ul>
       </div>
     </div>

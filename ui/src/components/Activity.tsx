@@ -1,22 +1,24 @@
+import { ArrowUpRight, ChevronsUpDown, Code2, Copy, Download, Eye, FileSearch, Keyboard, MousePointerClick, ScrollText, Search, Check, Circle, type LucideIcon } from "lucide-react";
 import type { RunView, StepView } from "../runState";
 
-const ICONS: Record<string, string> = {
-  goto: "↗", open_tab: "⧉", switch_tab: "⧉", close_tab: "⧉", list_tabs: "⧉", back: "←",
-  click: "◉", hover: "◌", type: "⌨", press: "⌨", select: "▾", scroll: "↕", wait: "◷",
-  find: "⌕", grep_source: "⌕", read_page: "☰", view_source: "</>", inspect_element: "◎", javascript_tool: "JS",
-  run_python: "λ", save_file: "⤓", use_script_output: "⇣", extract_rows: "⇣", done: "✓",
+const ICONS: Record<string, LucideIcon> = {
+  goto: ArrowUpRight, open_tab: Copy, switch_tab: Copy, close_tab: Copy, list_tabs: Copy, back: ArrowUpRight,
+  click: MousePointerClick, hover: MousePointerClick, type: Keyboard, fill: Keyboard, press: Keyboard, select: MousePointerClick, scroll: ChevronsUpDown, wait_for: Eye,
+  find: Search, grep_source: FileSearch, web_search: Search, find_items: Search, network_log: FileSearch, network_body: FileSearch, read_page: ScrollText, view_source: ScrollText,
+  inspect_element: Eye, javascript_tool: Code2, run_python: Code2, use_script_output: Download, extract_rows: Download, save_file: Download, done: Check,
 };
 
 function Step({ step, who }: { step: StepView; who: string }) {
+  const Icon = ICONS[step.tool] ?? Circle;
   return (
     <li className={step.ok ? "act" : "act bad"}>
-      <span className="act-icon" aria-hidden>{ICONS[step.tool] ?? "•"}</span>
+      <span className="act-icon" aria-hidden><Icon size={13} /></span>
       <div className="act-body">
         <div className="act-line">
-          {who && <span className="act-who">{who}</span>}
-          <span className="act-tool">{step.tool}</span>
+          {who && <span className="act-who mono">{who}</span>}
+          <span className="act-tool mono">{step.tool}</span>
           <span className="act-detail">{step.detail}</span>
-          <span className="act-no">#{step.step}</span>
+          <span className="act-no mono">{step.step}</span>
         </div>
         {step.outcome && (
           <details>
@@ -31,7 +33,7 @@ function Step({ step, who }: { step: StepView; who: string }) {
 
 /** What happened, newest first: every tool call with its result, and the run's notices. */
 export function Activity({ run }: { run: RunView }) {
-  if (!run.steps.length && !run.notices.length) return <p className="hint">Nothing yet.</p>;
+  if (!run.steps.length && !run.notices.length) return <p className="muted">Nothing yet.</p>;
   return (
     <>
       <ol className="activity">

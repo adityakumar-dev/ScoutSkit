@@ -39,6 +39,12 @@ def register(registry: ToolRegistry, ctx: ToolContext) -> None:
             raise ActionError(text if bad else f"{rejected} rows had no {collector.key_field}: this page may not list real items of the requested kind")
         return text
 
+    async def find_items() -> str:
+        found = await session.repeats()
+        if found is None:
+            raise ActionError("this page has no list of repeated items (fewer than 5 alike): use read_page, grep_source or inspect_element to see what it holds")
+        return found.describe()
+
     async def run_python(code: str) -> str:
         if workdir is None:
             raise ActionError("code execution is not available in this run")
@@ -92,6 +98,9 @@ def register(registry: ToolRegistry, ctx: ToolContext) -> None:
     for tool in (
         Tool("extract_rows", EXTRACT_HELP.format(fields=collector.fields) if collector.fields else EXTRACT_HELP_OPEN,
              {"rows": "list of objects"}, extract_rows),
+        Tool("find_items", "Find the list of repeated items on this page (table rows, cards, entries): the CSS selector that matches them, how many there are "
+             "(live page and raw source), what one item contains and its HTML. Use it FIRST for any list, then write one script with that selector.",
+             {}, find_items, reads=True),
         Tool("run_python", "Run Python 3 (standard library + beautifulsoup4 + lxml, no network) to extract data from the page. HTML_PATH is the RAW document "
              "as the server sent it (use it first: it often holds rows the page hides); RENDERED_PATH is the live DOM (only what is shown now); "
              "OUT_PATH is where to save results. All three are already-defined PATHS (file names): HTML and RENDERED are the same two documents as text, "

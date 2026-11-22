@@ -74,3 +74,33 @@ def test_the_same_failure_is_recognised_whatever_the_numbers_and_wording_around_
     b = _failure_of([], "Error: table#dataTablePS not found in the raw source. Cannot proceed.\nTraceback (most recent call last):\n  File \"/work/script_12.py\", line 83\nTypeError: x")
     assert a == b and a  # script numbers and line numbers do not make it a new error
     assert _failure_of([], "Total rows: 21") == "" and _failure_of(["click failed: no such element"], "") .startswith("click failed")
+
+
+def test_older_turns_are_cut_short_but_the_newest_stay_whole():
+    from langchain_core.messages import AIMessage, ToolMessage
+
+    from scoutskit.agent import FRESH_TURNS, OLD_CODE_CHARS, OLD_OUTPUT_CHARS, _thinned
+
+    big, code = "x" * 5000, "print(1)\n" * 200
+    history = []
+    for n in range(5):
+        history.append(AIMessage("", tool_calls=[{"name": "run_python", "args": {"code": code}, "id": f"c{n}"}]))
+        history.append(ToolMessage(big, tool_call_id=f"c{n}"))
+    thinned = _thinned(history)
+    assert len(thinned) == len(history) and history[1].content == big  # the original history is not changed
+    old_tool, new_tool = thinned[1], thinned[-1]
+    assert len(old_tool.content) < OLD_OUTPUT_CHARS + 100 and "left out" in old_tool.content
+    assert new_tool.content == big and thinned[-2].tool_calls[0]["args"]["code"] == code  # the newest turns whole
+    assert len(thinned[0].tool_calls[0]["args"]["code"]) < OLD_CODE_CHARS + 80 and thinned[0].tool_calls[0]["id"] == "c0"  # still a valid call
+    fresh_starts = len(history) - 2 * FRESH_TURNS
+    assert all(thinned[i].content == big for i in range(fresh_starts + 1, len(history), 2))
+    assert _thinned(history[:2 * FRESH_TURNS]) == history[:2 * FRESH_TURNS]  # a short history is left alone
+
+
+def test_a_page_that_says_it_has_no_data_is_recognised():
+    from scoutskit.agent import NO_DATA
+
+    for text in ('cell "No data available in table"', "No results found", "0 results", "No matching records found"):
+        assert NO_DATA.search(text), text
+    for text in ("Showing 10 results", "10 results", "Data available soon"):
+        assert not NO_DATA.search(text), text

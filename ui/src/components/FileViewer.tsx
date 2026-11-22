@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ArrowLeft, ArrowRight, Download, ExternalLink, X } from "lucide-react";
 import { kindOf, parseCsv, prettyJson } from "../fileKinds";
 import type { ViewFile } from "../viewFiles";
 import { size } from "./Files";
@@ -31,14 +32,14 @@ function useText(url: string, wanted: boolean): Loaded {
 function Table({ text, delimiter }: { text: string; delimiter: string }) {
   const [filter, setFilter] = useState("");
   const [head, ...body] = parseCsv(text, delimiter);
-  if (!head) return <p className="hint">This file is empty.</p>;
+  if (!head) return <p className="muted">This file is empty.</p>;
   const needle = filter.trim().toLowerCase();
   const matching = needle ? body.filter((row) => row.some((cell) => cell.toLowerCase().includes(needle))) : body;
   return (
     <div className="viewer-table">
       <div className="viewer-tools">
         <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={`Filter ${body.length} rows…`} aria-label="Filter rows" />
-        <span className="hint">{matching.length === body.length ? `${body.length} rows` : `${matching.length} of ${body.length} rows`} · {head.length} columns</span>
+        <span className="muted small">{matching.length === body.length ? `${body.length} rows` : `${matching.length} of ${body.length} rows`} · {head.length} columns</span>
       </div>
       <div className="table-wrap tall">
         <table>
@@ -50,7 +51,7 @@ function Table({ text, delimiter }: { text: string; delimiter: string }) {
           </tbody>
         </table>
       </div>
-      {matching.length > MAX_ROWS && <p className="hint">Showing the first {MAX_ROWS} rows; download the file for everything.</p>}
+      {matching.length > MAX_ROWS && <p className="muted small">Showing the first {MAX_ROWS} rows; download the file for everything.</p>}
     </div>
   );
 }
@@ -64,17 +65,17 @@ function Body({ file }: { file: ViewFile }) {
     return (
       <div className="viewer-none">
         <p>No preview for this kind of file.</p>
-        <a className="primary" href={file.downloadUrl} download>⤓ Download {file.name}</a>
+        <a className="btn primary" href={file.downloadUrl} download><Download size={14} /> Download {file.name}</a>
       </div>
     );
   }
-  if (text.state === "loading") return <p className="hint viewer-pad">Loading…</p>;
+  if (text.state === "loading") return <p className="muted viewer-pad">Loading…</p>;
   if (text.state === "error") return <p className="error viewer-pad">Could not load the file: {text.message}</p>;
   return (
     <>
       {kind === "csv" ? <Table text={text.text} delimiter={file.name.toLowerCase().endsWith(".tsv") ? "\t" : ","} />
         : <pre className="viewer-text">{kind === "json" ? prettyJson(text.text) : text.text}</pre>}
-      {text.cut && <p className="hint viewer-pad">Showing the first {MAX_TEXT_BYTES / 1_000_000} MB; download the file for everything.</p>}
+      {text.cut && <p className="muted viewer-pad">Showing the first {MAX_TEXT_BYTES / 1_000_000} MB; download the file for everything.</p>}
     </>
   );
 }
@@ -100,18 +101,18 @@ export function FileViewer({ files, current, onChange, onClose }: { files: ViewF
         <header className="viewer-head">
           <div className="viewer-title">
             <strong title={file.name}>{file.name}</strong>
-            <span className="hint">{file.label}{file.size ? ` · ${size(file.size)}` : ""}</span>
+            <span className="muted small">{file.label}{file.size ? ` · ${size(file.size)}` : ""}</span>
           </div>
           {files.length > 1 && (
             <div className="viewer-nav">
-              <button className="ghost" disabled={index === 0} onClick={() => onChange(files[index - 1].key)} aria-label="Previous file">←</button>
+              <button className="icon-btn" disabled={index === 0} onClick={() => onChange(files[index - 1].key)} aria-label="Previous file"><ArrowLeft size={15} /></button>
               <span className="mono">{index + 1}/{files.length}</span>
-              <button className="ghost" disabled={index === files.length - 1} onClick={() => onChange(files[index + 1].key)} aria-label="Next file">→</button>
+              <button className="icon-btn" disabled={index === files.length - 1} onClick={() => onChange(files[index + 1].key)} aria-label="Next file"><ArrowRight size={15} /></button>
             </div>
           )}
-          <a className="ghost" href={file.url} target="_blank" rel="noreferrer" title="Open in a new tab">↗</a>
-          <a className="primary" href={file.downloadUrl} download>⤓ Download</a>
-          <button className="ghost" onClick={onClose} aria-label="Close">✕</button>
+          <a className="icon-btn" href={file.url} target="_blank" rel="noreferrer" title="Open in a new tab" aria-label="Open in a new tab"><ExternalLink size={15} /></a>
+          <a className="btn sm primary" href={file.downloadUrl} download><Download size={14} /> Download</a>
+          <button className="icon-btn" onClick={onClose} aria-label="Close"><X size={16} /></button>
         </header>
         <div className="viewer-body"><Body key={file.key} file={file} /></div>
       </div>

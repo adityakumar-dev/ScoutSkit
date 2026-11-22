@@ -1,3 +1,4 @@
+import { Download } from "lucide-react";
 import type { ViewFile } from "../viewFiles";
 
 export const size = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1000))} KB`);
@@ -13,7 +14,7 @@ function FileRow({ file, onOpen }: { file: ViewFile; onOpen: () => void }) {
           <span className="hint">{file.size ? `${size(file.size)} · ` : ""}{file.label}</span>
         </span>
       </button>
-      <a className="file-get" href={file.downloadUrl} download title="Download">⤓</a>
+      <a className="icon-btn" href={file.downloadUrl} download title="Download" aria-label={`Download ${file.name}`}><Download size={15} /></a>
     </li>
   );
 }
@@ -23,7 +24,7 @@ export function Files({ files, onOpen }: { files: ViewFile[]; onOpen: (key: stri
   if (!files.length) return null;
   return (
     <section className="files">
-      <h4 className="panel-h">Files · {files.length}</h4>
+      <h4 className="section-h">Files <span className="count">{files.length}</span></h4>
       <ul>{files.map((file) => <FileRow key={file.key} file={file} onOpen={() => onOpen(file.key)} />)}</ul>
     </section>
   );

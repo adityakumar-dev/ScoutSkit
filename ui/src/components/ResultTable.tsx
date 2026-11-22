@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Maximize2 } from "lucide-react";
 import { api, type Row } from "../api";
 
 const SHOWN = 200;
@@ -15,9 +16,9 @@ export function ResultTable({ runId, items, hasRecipe, onExpand }: { runId: stri
   return (
     <section className="card">
       <div className="result-head">
-        <h2>Result: {items} items</h2>
+        <h4 className="section-h">Result <span className="count">{items}</span></h4>
         <span className="downloads">
-          {onExpand && <button className="ghost small-btn" onClick={onExpand}>⤢ Full view</button>}
+          {onExpand && <button className="btn sm" onClick={onExpand}><Maximize2 size={13} /> Full view</button>}
           <a href={api.fileUrl(runId, "result.csv")} download>CSV</a>
           <a href={api.fileUrl(runId, "result.json")} download>JSON</a>
           {hasRecipe && <a href={api.fileUrl(runId, "recipe.json")} download>Recipe</a>}
@@ -35,7 +36,7 @@ export function ResultTable({ runId, items, hasRecipe, onExpand }: { runId: stri
           </tbody>
         </table>
       </div>
-      {rows.length > SHOWN && <p className="hint">Showing the first {SHOWN} of {rows.length}; download the CSV for everything.</p>}
+      {rows.length > SHOWN && <p className="muted small">Showing the first {SHOWN} of {rows.length}; download the CSV for everything.</p>}
     </section>
   );
 }

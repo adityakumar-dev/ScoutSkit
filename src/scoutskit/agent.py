@@ -28,6 +28,8 @@ from .recorder import RunRecorder
 from .tools import Collector, build_registry, langchain_tools
 
 MAX_DONE_REJECTIONS = 3
+READ_HINT = 6  # steps of only reading the same page, with nothing collected or opened, before the agent is told to decide
+READ_GIVE_UP = 10
 REPEATED_ERROR_HINT = 3
 REPEATED_ERROR_GIVE_UP = 6
 KEEP_TURNS = 6  # assistant turns (with their tool results) kept in the prompt
@@ -37,8 +39,10 @@ elements you can act on carry refs like [ref=e12]. Call exactly one tool per tur
 Rules:
 - Use refs exactly as shown. Anything inside a closed menu is not in the tree: open the menu first.
 - A long list may be folded into one line "… N more row items like the ones above"; read_page(ref) shows a part. To collect ALL of a long list, write code.
-- The tree's role names (grid, rowgroup, gridcell, ...) are computed by the browser: they are NOT HTML tags or attributes. Before writing selectors,
-  look at the real HTML: inspect_element(ref) for one element, grep_source / view_source for the page source (e.g. table, tr, td).
+- The tree's role names (grid, rowgroup, gridcell, ...) and its refs (e40, f1e12) are computed by the browser: they are NOT HTML tags, ids or
+  attributes, and a ref means nothing inside a script. For a list of items call find_items first: it gives the real CSS selector, the count and
+  what one item contains. Otherwise look at the real HTML: inspect_element(ref), grep_source / view_source (search for text that is really in
+  the HTML, never for a CSS selector).
 - The task decides what you do. Ignore forms, logins and buttons the task does not need. To reach other pages, look for
   navigation: links, or a menu button such as "Toggle navigation".
 - Few items: extract_rows with EVERY item visible on the CURRENT page, copied exactly as shown (the requested field names, the page's own
@@ -53,6 +57,8 @@ Rules:
   too. Keep every column to the one element that holds that field; a cell that includes a nested detail block is wrong.
 - To find a site or a document, call web_search(query): real search results as text. Never open a search engine in the browser (they
   refuse automated browsers). A result that is the document itself (a PDF link) can be kept straight away with save_file(its link).
+- If the page you were sent to holds no data (0 results, an empty table, "No data available"), do not hunt for hidden requests for more than
+  a few steps: call fail with that reason so another source is tried, or use web_search and open_tab to reach a source that has the data.
 - Check that the page is the edition, year or version the task names (a site may now show a newer one): if it is not, look for the right
   one, or say so with fail instead of collecting the wrong data.
 - Never log in, register, enter personal data, or pay.
@@ -103,6 +109,34 @@ class AgentState(TypedDict):
     message: str
 
 
+NO_DATA = re.compile(r"no data available|no (matching )?(records|results|entries|data) (found|available)|nothing found|\b0 results\b", re.I)
+FRESH_TURNS = 2  # the newest turns keep their full tool output; older ones are cut so a stuck agent does not pay for the same bulk every step
+OLD_OUTPUT_CHARS = 240
+OLD_CODE_CHARS = 500
+
+
+def _thinned(history: list[BaseMessage]) -> list[BaseMessage]:
+    """The same history with the output (and long scripts) of all but the newest turns cut short.
+
+    Each step re-sends the recent history; grep and page reads of earlier steps are bulk the model has already acted on,
+    and they made a step cost 15,000+ tokens. What was done and what came of it stays, in a line."""
+    ai_at = [i for i, m in enumerate(history) if isinstance(m, AIMessage)]
+    if len(ai_at) <= FRESH_TURNS:
+        return history
+    cut = ai_at[-FRESH_TURNS]
+    thinned: list[BaseMessage] = []
+    for i, message in enumerate(history):
+        if i < cut and isinstance(message, ToolMessage) and isinstance(message.content, str) and len(message.content) > OLD_OUTPUT_CHARS:
+            thinned.append(message.model_copy(update={"content": message.content[:OLD_OUTPUT_CHARS] + f" …[{len(message.content) - OLD_OUTPUT_CHARS} more characters of this earlier output left out]"}))
+        elif i < cut and isinstance(message, AIMessage) and any(len(str(c.get("args", {}).get("code", ""))) > OLD_CODE_CHARS for c in message.tool_calls):
+            calls = [{**c, "args": {**c["args"], "code": str(c["args"]["code"])[:OLD_CODE_CHARS] + "\n# …(the rest of this earlier script is left out)"}} if "code" in c.get("args", {}) else c
+                     for c in message.tool_calls]
+            thinned.append(message.model_copy(update={"tool_calls": calls}))
+        else:
+            thinned.append(message)
+    return thinned
+
+
 def _failure_of(errors: list[str], output: str) -> str:
     """A short, number-free description of how a step failed, or "" when it did not: the same text means the same failure."""
     text = "; ".join(errors) or ("\n".join(l for l in output.splitlines() if l.strip()) if ("Traceback (most recent call last)" in output or output.lstrip().startswith("Error")) else "")
@@ -139,6 +173,7 @@ class Agent:
         self.budget = budget  # shared by the sub-agents of a run (budget.py); None: unlimited
         self.search = search  # async (query) -> [Hit]: web search as a tool; None: the agent has no search
         self.user_acted = False  # a person used the browser since the agent last looked
+        self.read_streak, self.read_url, self.read_rows = 0, "", 0  # consecutive read-only steps on one page with nothing collected
         self.failures: dict[tuple[str, str], int] = {}  # how often each kind of failure happened, for noticing a loop that rewording hides
         self.helped: set[str] = set()  # sites where a person was already asked to pass a check; asked once each
         self.active = 0
@@ -168,6 +203,7 @@ class Agent:
         collector = Collector(list(plan.fields), plan.key_field)
         registry = build_registry(self.session, collector, lambda: _verdict(plan, collector, self.files_saved), workdir=self.rec.code_dir, search=self.search)
         tools = langchain_tools(registry)
+        self.read_tools = {t.name for t in registry.tools() if t.reads}
         self.bound = [model.bind_tools(tools) for model in self.models]
         self.page: dict = {}
         self.latency_ms = 0
@@ -216,6 +252,7 @@ class Agent:
                 "url": self.session.page.url, "title": await self.session.title(), "tree": tree, "labels": labels,
                 "total": await self.session.stated_total(),
                 "census": await self.session.census(list(collector.rows)),
+                "repeats": await self.session.repeats(),
                 "details": await self.session.details(),
                 "feeds": await self.session.data_feeds(),
             }
@@ -321,6 +358,16 @@ class Agent:
                 self.seen[signature] = self.seen.get(signature, 0) + 1
                 if self.seen[signature] >= 2:
                     errors.append("You repeated the same step with no progress. " + self._untried_hint())
+                # reading is not progress: many reads of one page with nothing collected means the page may simply not hold the data
+                if call["name"] in self.read_tools and url_after == self.read_url and len(collector.rows) == self.read_rows:
+                    self.read_streak += 1
+                else:
+                    self.read_streak, self.read_url, self.read_rows = 0, url_after, len(collector.rows)
+                if self.read_streak >= READ_HINT:
+                    errors.append(f"You have only read this page for {self.read_streak} steps and collected nothing. If the page does not hold the data "
+                                  "(it says 0 results, or its table is empty), call fail with that reason so another source can be tried; otherwise extract now.")
+                if self.read_streak >= READ_GIVE_UP and not status:
+                    status, message = "incomplete", f"read the same page for {self.read_streak} steps without extracting anything (the page may hold no data)"
                 failure = _failure_of(errors, content)
                 if failure:  # a script that fails the same way again and again is not fixed by rewording it
                     self.failures[(call["name"], failure)] = self.failures.get((call["name"], failure), 0) + 1
@@ -363,12 +410,15 @@ class Agent:
         sample = [list(r.values())[:2] for r in list(collector.rows.values())[:3]]
         header = HumanMessage(f"TASK: {task}\nITEM: {plan.item_name}\nFIELDS: {fields}")
         turns = [i for i, m in enumerate(state["messages"]) if isinstance(m, AIMessage)]
-        history = state["messages"][turns[-KEEP_TURNS] if len(turns) >= KEEP_TURNS else 0 :]
+        history = _thinned(state["messages"][turns[-KEEP_TURNS] if len(turns) >= KEEP_TURNS else 0 :])
         page = HumanMessage(
             f"COLLECTED SO FAR: {len(collector.rows)} items {sample if sample else ''}\n"
             + (f"FILES SAVED FOR THE USER: {', '.join(f.name for f in self.session.files.saved)} (if they already answer the task, call done now)\n" if self.session.files and self.session.files.saved else "")
             + (f"THE PAGE STATES A TOTAL OF {self.page['total']} ENTRIES (collect all of them)\n" if self.page.get("total") else "")
             + (f"{self.page['census'].sentence().upper()}: READ HTML_PATH (THE RAW SOURCE) TO GET THEM ALL\n" if self.page.get("census") else "")
+            + (f"{self.page['repeats'].sentence()}\n" if self.page.get("repeats") and not self.page.get("census") else "")
+            + ("THE PAGE SAYS IT HOLDS NO DATA (an empty table or 'no results'): unless it is a search form you have not used yet, call fail with that "
+               "reason now, so another source is tried.\n" if not collector.rows and not self.page.get("repeats") and NO_DATA.search(self.page["tree"]) else "")
             + (f"MORE FIELDS PER ITEM IN THE SOURCE: {self.page['details'][0].sentence()}. These belong to each item: include them "
                "(join each block to its row) unless the user named specific columns.\n"
                if self.page.get("details") else "")
